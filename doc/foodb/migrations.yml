@@ -1,0 +1,11 @@
+callbacks:
+    beforeAll:
+        - callbacks/beforeAll
+    beforeEach:
+        - callbacks/beforeEach
+    afterEach:
+        - callbacks/afterEach
+    afterAll:
+        - callbacks/afterAll
+        - grants
+conn: dbname=foodb

@@ -1,0 +1,4 @@
+GRANT USAGE ON SCHEMA foo TO foo;
+GRANT ALL ON ALL TABLES IN SCHEMA foo TO foo;
+
+INSERT INTO ops (op) VALUES ('grants foo');
