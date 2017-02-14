@@ -84,6 +84,7 @@ class BaselineError(MigrateError):
     '''
     pass
 
+
 REF_COLUMNS = ['version', 'description', 'type',
                'installed_by', 'installed_on']
 
@@ -119,6 +120,7 @@ def _is_initialized(cursor):
                               'structure: %s' % '|'.join(colnames))
 
     return True
+
 
 MIGRATION_FILE_RE = re.compile(
     r'V(?P<version>\d+)__(?P<description>.+)\.sql$'
@@ -576,6 +578,7 @@ def migrate(config):
 
     _finish(config)
 
+
 COMMANDS = {
     'info': info,
     'clean': clean,
@@ -661,6 +664,7 @@ def _main():
     config = get_config(args.base_dir, args)
 
     COMMANDS[args.cmd](config)
+
 
 if __name__ == '__main__':
     _main()
