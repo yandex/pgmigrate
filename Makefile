@@ -1,5 +1,7 @@
 .PHONY: test
 
 test:
-	docker build -t pgmigrate .
-	docker run -t pgmigrate
+	docker-compose build
+	docker-compose run --rm pgmigrate
+	docker-compose stop
+
