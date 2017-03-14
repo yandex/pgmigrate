@@ -1,0 +1,29 @@
+version: '2.1'
+
+services:
+  postgres:
+    image: postgres:alpine
+    container_name: postgres
+    environment:
+      TERM: "rxvt"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    restart: always
+
+  pgmigrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pgmigrate
+    volumes:
+      - ./:/dist
+    environment:
+      TERM: "rxvt"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    working_dir: /dist
+    links:
+      - postgres
+    depends_on:
+      - postgres
+    restart: always

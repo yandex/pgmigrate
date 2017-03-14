@@ -1,7 +1,21 @@
 sudo: required
 
 services:
-      - docker
+  - docker
+
+before_script:
+  - docker-compose build
 
 script:
-      - make test
+  - docker-compose run --rm pgmigrate
+  - docker-compose stop
+
+env:
+  DOCKER_COMPOSE_VERSION: 1.11.2
+
+before_install:
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+
