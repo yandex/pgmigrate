@@ -305,7 +305,7 @@ def _apply_statement(statement, cursor):
     Execute statement using cursor
     '''
     try:
-        cursor.execute(statement, 'utf-8')
+        cursor.execute(statement)
     except psycopg2.Error as exc:
         LOG.error('Error executing statement:')
         for line in statement.splitlines():
