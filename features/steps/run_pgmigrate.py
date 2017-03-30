@@ -18,6 +18,7 @@ def run_pgmigrate(migr_dir, args):
     stdout, stderr = p.communicate()
     return p.returncode, str(stdout), str(stderr)
 
+
 @given('successful pgmigrate run with "{args}"')
 def step_impl(context, args):
     if context.migrate_config:
