@@ -33,7 +33,7 @@ import os
 import re
 import sys
 from builtins import str as text
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 
 import psycopg2
 import sqlparse
@@ -453,8 +453,11 @@ def info(config, stdout=True):
     state = _get_state(config.base_dir, config.baseline,
                        config.target, config.cursor)
     if stdout:
+        out_state = OrderedDict()
+        for version in sorted(state, key=int):
+            out_state[version] = state[version]
         sys.stdout.write(
-            json.dumps(state, indent=4, separators=(',', ': ')) + '\n')
+            json.dumps(out_state, indent=4, separators=(',', ': ')) + '\n')
 
     _finish(config)
 
