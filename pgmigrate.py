@@ -181,13 +181,15 @@ def _get_migrations_info(base_dir, baseline_v, target_v):
     Get migrations from baseline to target from base dir
     '''
     migrations = {}
+    target = target_v if target_v is not None else float('inf')
+
     for version, ret in _get_migrations_info_from_dir(base_dir).items():
-        if version > baseline_v and version <= target_v:
+        if version > baseline_v and version <= target:
             migrations[version] = ret.meta
         else:
             LOG.info(
                 'Ignore migration %r cause baseline: %r or target: %r',
-                ret, baseline_v, target_v
+                ret, baseline_v, target
             )
     return migrations
 
