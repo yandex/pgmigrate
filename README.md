@@ -45,6 +45,13 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.1 (2017-04-01)
+    * Fix bug with python format patterns in migration text
+    * Sort info command output by version
+    * Support 'latest' target version
+    * Add option to override user in migration meta
+    * Fix info command fail without target on initialized database
+    * Add session setup option
 * 1.0.0 (2016-10-03)
     * First opensource version
 
