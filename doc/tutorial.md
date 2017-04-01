@@ -334,3 +334,19 @@ foodb=# SELECT * FROM ops;
   10 | migration V0003__NONTRANSACTIONAL_Add_index_on_baz_column.sql
 (10 rows)
 ```
+
+## UTF-8 Migrations
+
+In most cases you should avoid non-ascii characters in your migrations.
+So PGmigrate will complain about them with:
+```
+pgmigrate.MalformedStatement: Non ascii symbols in file
+```
+
+But sometimes there is no way to avoid migration with UTF-8
+(imagine a case with inserting some initial data in your database).
+You could insert modeline in migration file to disable
+non-ascii characters check:
+```
+/* pgmigrate-encoding: utf-8 */
+```
