@@ -133,7 +133,7 @@ Callbacks = namedtuple('Callbacks', ('beforeAll', 'beforeEach',
                                      'afterEach', 'afterAll'))
 
 Config = namedtuple('Config', ('target', 'baseline', 'cursor', 'dryrun',
-                               'callbacks', 'base_dir', 'conn',
+                               'callbacks', 'user', 'base_dir', 'conn',
                                'conn_instance'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance']
@@ -222,6 +222,11 @@ def _get_info(base_dir, baseline_v, target_v, cursor):
     return ret
 
 
+def _get_database_user(cursor):
+    cursor.execute('SELECT CURRENT_USER')
+    return cursor.fetchone()[0]
+
+
 def _get_state(base_dir, baseline_v, target, cursor):
     '''
     Get info wrapper (able to handle noninitialized database)
@@ -232,7 +237,7 @@ def _get_state(base_dir, baseline_v, target, cursor):
         return _get_migrations_info(base_dir, baseline_v, target)
 
 
-def _set_baseline(baseline_v, cursor):
+def _set_baseline(baseline_v, user, cursor):
     '''
     Cleanup schema_version and set baseline
     '''
@@ -253,8 +258,9 @@ def _set_baseline(baseline_v, cursor):
     LOG.info('setting baseline')
     query = cursor.mogrify('INSERT INTO public.schema_version '
                            '(version, type, description, installed_by) '
-                           'VALUES (%s::bigint, %s, %s, CURRENT_USER);',
-                           (text(baseline_v), 'manual', 'Forced baseline'))
+                           'VALUES (%s::bigint, %s, %s, %s);',
+                           (text(baseline_v), 'manual',
+                            'Forced baseline', user))
     cursor.execute(query)
     LOG.info(cursor.statusmessage)
 
@@ -326,7 +332,7 @@ def _apply_file(file_path, cursor):
         raise exc
 
 
-def _apply_version(version, base_dir, cursor):
+def _apply_version(version, base_dir, user, cursor):
     '''
     Execute all statements in migration version
     '''
@@ -337,9 +343,10 @@ def _apply_version(version, base_dir, cursor):
     _apply_file(version_info.filePath, cursor)
     query = cursor.mogrify('INSERT INTO public.schema_version '
                            '(version, description, installed_by) '
-                           'VALUES (%s::bigint, %s, CURRENT_USER)',
+                           'VALUES (%s::bigint, %s, %s)',
                            (text(version),
-                            version_info.meta['description']))
+                            version_info.meta['description'],
+                            user))
     cursor.execute(query)
 
 
@@ -396,7 +403,7 @@ def _get_callbacks(callbacks, base_dir=''):
         return _parse_str_callbacks(callbacks, ret, base_dir)
 
 
-def _migrate_step(state, callbacks, base_dir, cursor):
+def _migrate_step(state, callbacks, base_dir, user, cursor):
     '''
     Apply one version with callbacks
     '''
@@ -424,7 +431,7 @@ def _migrate_step(state, callbacks, base_dir, cursor):
                     LOG.info(callback)
                     _apply_file(callback, cursor)
 
-            _apply_version(version, base_dir, cursor)
+            _apply_version(version, base_dir, user, cursor)
 
             if callbacks.afterEach:
                 LOG.info('Executing afterEach callbacks:')
@@ -484,7 +491,7 @@ def baseline(config):
     '''
     if not _is_initialized(config.cursor):
         _init_schema(config.cursor)
-    _set_baseline(config.baseline, config.cursor)
+    _set_baseline(config.baseline, config.user, config.cursor)
 
     _finish(config)
 
@@ -559,7 +566,7 @@ def migrate(config):
             nt_conn.autocommit = True
             cursor = nt_conn.cursor()
             _migrate_step(state, _get_callbacks(''),
-                          config.base_dir, cursor)
+                          config.base_dir, config.user, cursor)
         else:
             steps = _prepare_nontransactional_steps(state, config.callbacks)
 
@@ -576,9 +583,11 @@ def migrate(config):
                 else:
                     cur = config.cursor
                     commit_req = True
-                _migrate_step(step['state'], step['cbs'], config.base_dir, cur)
+                _migrate_step(step['state'], step['cbs'],
+                              config.base_dir, config.user, cur)
     else:
-        _migrate_step(state, config.callbacks, config.base_dir, config.cursor)
+        _migrate_step(state, config.callbacks, config.base_dir,
+                      config.user, config.cursor)
 
     _finish(config)
 
@@ -591,7 +600,7 @@ COMMANDS = {
 }
 
 CONFIG_DEFAULTS = Config(target=None, baseline=0, cursor=None, dryrun=False,
-                         callbacks='', base_dir='',
+                         callbacks='', base_dir='', user=None,
                          conn='dbname=postgres user=postgres '
                               'connect_timeout=1',
                          conn_instance=None)
@@ -628,6 +637,11 @@ def get_config(base_dir, args=None):
     conf = conf._replace(callbacks=_get_callbacks(conf.callbacks,
                                                   conf.base_dir))
 
+    if conf.user is None:
+        conf = conf._replace(user=_get_database_user(conf.cursor))
+    elif not conf.user:
+        raise ConfigParseError('Empty user name')
+
     return conf
 
 
@@ -651,6 +665,9 @@ def _main():
                         type=str,
                         default='',
                         help='Migrations base dir')
+    parser.add_argument('-u', '--user',
+                        type=str,
+                        help='Override database user in migration info')
     parser.add_argument('-b', '--baseline',
                         type=int,
                         help='Baseline version')

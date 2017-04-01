@@ -10,7 +10,7 @@ from behave import given, then, when
 def run_pgmigrate(migr_dir, args):
     cmd = ['coverage', 'run', '-p', '--include=pgmigrate.py',
            './pgmigrate.py', '-vvv', '-d', migr_dir,
-           '-c', 'dbname=pgmigratetest'] + str(args).split()
+           '-c', 'dbname=pgmigratetest'] + str(args).split(' ')
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)

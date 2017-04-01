@@ -16,6 +16,6 @@ def step_impl(context, query):
     formatted = ';'.join(map(lambda x: '|'.join(map(str, x)), r))
     res = []
     for row in context.table:
-        res.append(row['seq'] + '|' + row['op'])
+        res.append(row[0] + '|' + row[1])
     result = ';'.join(res)
     assert formatted == result, 'Unexpected result: ' + formatted

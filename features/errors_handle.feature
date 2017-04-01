@@ -60,6 +60,17 @@ Feature: Handling migration errors
         And database contains schema_version
         And migrate command failed with Unable to mix
 
+    Scenario: Empty user name
+        Given migration dir
+        And migrations
+           | file                        | code      |
+           | V1__Single_migration.sql    | SELECT 1; |
+        And database and connection
+        When we run pgmigrate with "-u  -t 1 migrate"
+        Then pgmigrate command "failed"
+        And database has no schema_version table
+        And migrate command failed with Empty user name
+
     Scenario: Baseline on applied version
         Given migration dir
         And migrations
