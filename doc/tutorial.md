@@ -350,3 +350,14 @@ non-ascii characters check:
 ```
 /* pgmigrate-encoding: utf-8 */
 ```
+
+## Session setup
+
+Sometimes you need to set some session options before migrate
+(e.g. isolation level). It is possible with `-s` option or `session` in config.
+For example to set `serializable` isolation level and
+lock timeout to 30 seconds one could do something like this:
+```
+pgmigrate -s "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE" \
+    -s "SET lock_timeout = '30s'" ...
+```

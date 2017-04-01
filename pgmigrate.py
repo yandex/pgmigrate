@@ -96,6 +96,18 @@ def _create_connection(conn_string):
     return conn
 
 
+def _init_cursor(conn, session):
+    '''
+    Get cursor initialized with session commands
+    '''
+    cursor = conn.cursor()
+    for query in session:
+        cursor.execute(query)
+        LOG.info(cursor.statusmessage)
+
+    return cursor
+
+
 def _is_initialized(cursor):
     '''
     Check that database is initialized
@@ -134,7 +146,7 @@ Callbacks = namedtuple('Callbacks', ('beforeAll', 'beforeEach',
 
 Config = namedtuple('Config', ('target', 'baseline', 'cursor', 'dryrun',
                                'callbacks', 'user', 'base_dir', 'conn',
-                               'conn_instance'))
+                               'session', 'conn_instance'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance']
 
@@ -411,7 +423,6 @@ def _migrate_step(state, callbacks, base_dir, user, cursor):
     '''
     before_all_executed = False
     should_migrate = False
-    cursor.execute('SET lock_timeout = 0;')
     if not _is_initialized(cursor):
         LOG.info('schema not initialized')
         _init_schema(cursor)
@@ -544,8 +555,9 @@ def migrate(config):
     '''
     if config.target is None:
         LOG.error('Unknown target (you could use "latest" to '
-                  'migrate to latest available version)')
+                  'use latest available version)')
         raise MigrateError('Unknown target')
+
     state = _get_state(config.base_dir, config.baseline,
                        config.target, config.cursor)
     not_applied = [x for x in state if state[x]['installed_on'] is None]
@@ -566,7 +578,7 @@ def migrate(config):
             config.cursor.execute('rollback;')
             nt_conn = _create_connection(config.conn)
             nt_conn.autocommit = True
-            cursor = nt_conn.cursor()
+            cursor = _init_cursor(nt_conn, config.session)
             _migrate_step(state, _get_callbacks(''),
                           config.base_dir, config.user, cursor)
         else:
@@ -581,7 +593,7 @@ def migrate(config):
                     config.cursor.execute('commit')
                     commit_req = False
                 if not list(step['state'].values())[0]['transactional']:
-                    cur = nt_conn.cursor()
+                    cur = _init_cursor(nt_conn, config.session)
                 else:
                     cur = config.cursor
                     commit_req = True
@@ -603,6 +615,7 @@ COMMANDS = {
 
 CONFIG_DEFAULTS = Config(target=None, baseline=0, cursor=None, dryrun=False,
                          callbacks='', base_dir='', user=None,
+                         session=['SET lock_timeout = 0'],
                          conn='dbname=postgres user=postgres '
                               'connect_timeout=1',
                          conn_instance=None)
@@ -635,7 +648,7 @@ def get_config(base_dir, args=None):
             conf = conf._replace(target=int(conf.target))
 
     conf = conf._replace(conn_instance=_create_connection(conf.conn))
-    conf = conf._replace(cursor=conf.conn_instance.cursor())
+    conf = conf._replace(cursor=_init_cursor(conf.conn_instance, conf.session))
     conf = conf._replace(callbacks=_get_callbacks(conf.callbacks,
                                                   conf.base_dir))
 
@@ -677,6 +690,9 @@ def _main():
                         type=str,
                         help='Comma-separated list of callbacks '
                              '(type:dir/file)')
+    parser.add_argument('-s', '--session',
+                        action='append',
+                        help='Session setup (e.g. isolation level)')
     parser.add_argument('-n', '--dryrun',
                         action='store_true',
                         help='Say "rollback" in the end instead of "commit"')
