@@ -308,9 +308,9 @@ postgres=# CREATE DATABASE foodb;
 CREATE DATABASE
 ```
 
-Now migrate strait to version 3
+Now migrate to latest available version
 ```
-admin@localhost foodb $ pgmigrate -t 3 migrate
+admin@localhost foodb $ pgmigrate -t latest migrate
 ```
 
 Operations log will look like this:

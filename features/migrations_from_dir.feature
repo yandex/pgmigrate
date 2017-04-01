@@ -42,6 +42,24 @@ Feature: Getting migrations from dir
         And database contains schema_version
         And migration info contains single migration
 
+    Scenario: 'latest' target migrates to latest version
+        Given migration dir
+        And migrations
+           | file                      | code                                                 |
+           | V1__Single_migration.sql  | INSERT INTO mycooltable (op) values ('Migration 1'); |
+           | V2__Another_migration.sql | INSERT INTO mycooltable (op) values ('Migration 2'); |
+        And callbacks
+           | type       | file            | code                                                        |
+           | beforeAll  | before_all.sql  | CREATE TABLE mycooltable (seq SERIAL PRIMARY KEY, op TEXT); |
+        And database and connection
+        When we run pgmigrate with our callbacks and "-t latest migrate"
+        Then pgmigrate command "succeeded"
+        And database contains schema_version
+        And query "SELECT * from mycooltable order by seq;" equals
+           | seq | op          |
+           | 1   | Migration 1 |
+           | 2   | Migration 2 |
+
     Scenario: Callbacks are executed in correct order
         Given migration dir
         And migrations

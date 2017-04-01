@@ -534,7 +534,8 @@ def migrate(config):
     Migrate cmdline wrapper
     '''
     if config.target is None:
-        LOG.error('Unknown target')
+        LOG.error('Unknown target (you could use "latest" to '
+                  'migrate to latest available version)')
         raise MigrateError('Unknown target')
     state = _get_state(config.base_dir, config.baseline,
                        config.target, config.cursor)
@@ -616,6 +617,12 @@ def get_config(base_dir, args=None):
             if i in args.__dict__ and args.__dict__[i] is not None:
                 conf = conf._replace(**{i: args.__dict__[i]})
 
+    if conf.target is not None:
+        if conf.target == 'latest':
+            conf = conf._replace(target=float('inf'))
+        else:
+            conf = conf._replace(target=int(conf.target))
+
     conf = conf._replace(conn_instance=_create_connection(conf.conn))
     conf = conf._replace(cursor=conf.conn_instance.cursor())
     conf = conf._replace(callbacks=_get_callbacks(conf.callbacks,
@@ -635,7 +642,7 @@ def _main():
                         type=str,
                         help='Operation')
     parser.add_argument('-t', '--target',
-                        type=int,
+                        type=str,
                         help='Target version')
     parser.add_argument('-c', '--conn',
                         type=str,
