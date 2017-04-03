@@ -227,11 +227,12 @@ def _get_info(base_dir, baseline_v, target_v, cursor):
         ret[version['version']] = version
 
         baseline_v = max(baseline_v, sorted(ret.keys())[-1])
-        migrations_info = _get_migrations_info(base_dir, baseline_v, target_v)
-        for version in migrations_info:
-            num = migrations_info[version]['version']
-            if num not in ret:
-                ret[num] = migrations_info[version]
+
+    migrations_info = _get_migrations_info(base_dir, baseline_v, target_v)
+    for version in migrations_info:
+        num = migrations_info[version]['version']
+        if num not in ret:
+            ret[num] = migrations_info[version]
 
     return ret
 
