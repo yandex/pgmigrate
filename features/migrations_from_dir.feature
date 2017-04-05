@@ -31,6 +31,17 @@ Feature: Getting migrations from dir
         And database contains schema_version
         And migration info contains single migration
 
+    Scenario: Migration with comment correctly applied
+        Given migration dir
+        And migrations
+           | file                     | code                                   |
+           | V1__Single_migration.sql | SELECT 1;\n\n-- Comment\n-- Comment 2\n|
+        And database and connection
+        When we run pgmigrate with "-t 1 migrate"
+        Then pgmigrate command "succeeded"
+        And database contains schema_version
+        And migration info contains single migration
+
     Scenario: Python format is ignored in migration text
         Given migration dir
         And migrations

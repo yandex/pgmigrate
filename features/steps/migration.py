@@ -10,7 +10,7 @@ def step_impl(context):
     for row in context.table:
         path = os.path.join(migrations_path, row['file'])
         with io.open(path, 'w', encoding='utf-8') as f:
-            f.write(row['code'])
+            f.write(row['code'].replace('\\n', '\n'))
 
 
 @given('migration dir "{dirname}"')  # noqa
