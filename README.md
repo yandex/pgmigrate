@@ -45,6 +45,9 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.2 (2017-04-05)
+    * Speed up get_info function a bit
+    * Fix callbacks in transactional/nontransactional migrations mix on db init
 * 1.0.1 (2017-04-01)
     * Fix bug with python format patterns in migration text
     * Sort info command output by version
