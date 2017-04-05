@@ -234,7 +234,11 @@ def _get_info(base_dir, baseline_v, target_v, cursor):
         if num not in ret:
             ret[num] = migrations_info[version]
 
-    return ret
+    orderedret = OrderedDict()
+    for version in sorted(ret, key=int):
+        orderedret[version] = ret[version]
+
+    return orderedret
 
 
 def _get_database_user(cursor):
