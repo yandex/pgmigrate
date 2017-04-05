@@ -315,6 +315,7 @@ def _get_statements(path):
             raise MalformedStatement(
                 'Non ascii symbols in file: {0}, {1}'.format(
                     path, text(exc)))
+    data = sqlparse.format(data, strip_comments=True)
     for statement in sqlparse.parsestream(data, encoding='utf-8'):
         st_str = text(statement).strip().encode('utf-8')
         if st_str:
