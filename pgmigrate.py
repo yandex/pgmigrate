@@ -533,16 +533,16 @@ def _prepare_nontransactional_steps(state, callbacks):
     if i['state']:
         steps.append(i)
 
-    prev_nontransactional = False
+    transactional = []
     for (num, step) in enumerate(steps):
-        if not list(step['state'].values())[0]['transactional']:
-            if num != len(steps) - 1:
-                steps[num-1]['cbs'] = steps[num-1]['cbs']._replace(afterAll=[])
-            prev_nontransactional = True
-        else:
-            if prev_nontransactional:
-                steps[num]['cbs'] = steps[num]['cbs']._replace(beforeAll=[])
-            prev_nontransactional = False
+        if list(step['state'].values())[0]['transactional']:
+            transactional.append(num)
+
+    if len(transactional) > 1:
+        for num in transactional[1:]:
+            steps[num]['cbs'] = steps[num]['cbs']._replace(beforeAll=[])
+        for num in transactional[:-1]:
+            steps[num]['cbs'] = steps[num]['cbs']._replace(afterAll=[])
 
     LOG.info('Initialization plan result:\n %s',
              json.dumps(steps, indent=4, separators=(',', ': ')))
