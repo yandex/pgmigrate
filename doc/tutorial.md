@@ -361,3 +361,14 @@ lock timeout to 30 seconds one could do something like this:
 pgmigrate -s "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE" \
     -s "SET lock_timeout = '30s'" ...
 ```
+
+## Using multiple configuration files
+
+In order to use custom configuration file use `--config` command line
+argument (short version is `-y`). Default values is `migration.yml`.
+
+You can have another config file to run migratins on production system,
+for example. To use it run pgmigrate with this option:
+```
+pgmigrate -y production.yml -t latest migrate
+```

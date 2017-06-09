@@ -627,7 +627,7 @@ def get_config(base_dir, args=None):
     '''
     Load configuration from yml in base dir with respect of args
     '''
-    path = os.path.join(base_dir, 'migrations.yml')
+    path = os.path.join(base_dir, args.config)
     try:
         with codecs.open(path, encoding='utf-8') as i:
             base = yaml.load(i.read())
@@ -702,6 +702,10 @@ def _main():
                         default=0,
                         action='count',
                         help='Be verbose')
+    parser.add_argument('-y', '--config',
+                        help='Use custom configuration YAML file instead of migration.yml',
+                        type=str,
+                        default='migration.yml')
 
     args = parser.parse_args()
     logging.basicConfig(
