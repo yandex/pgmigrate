@@ -14,6 +14,10 @@ foodb
 │   └── beforeEach # will be executed before each migration
 ├── grants # use this dir to set special callbacks for grants
 ├── migrations # migrations dir
+│   ├── V0001__Initial_schema_foo.sql    # Migrations should have unique, 
+│   ├── V0002__Add_baz_column_to_foo.sql # increasing numbers. Filename format: 
+│                                        # V[number]__[description].sql
+│                                        # Note: uppercase V, two underscores
 ├── migrations.yml # pgmigrate configuration
 ```
 Every sql file has special operation on table `ops`.
