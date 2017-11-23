@@ -144,3 +144,8 @@ Feature: Handling migration errors
         Then pgmigrate command "failed"
         And migrate command failed with First migration MUST be transactional
         And database has no schema_version table
+        
+    Scenario: Missing Migrations directory
+        Given no migration dir
+        When we run pgmigrate with "-t 1 migrate"
+        Then migrate command failed with Could not find migrations directory

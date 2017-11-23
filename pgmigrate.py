@@ -164,6 +164,10 @@ def _get_migrations_info_from_dir(base_dir):
                 continue
             match = MIGRATION_FILE_RE.match(fname)
             if match is None:
+                LOG.info(
+                    'Ignoring file %s. It does not match the file format %s',
+                    file_path, MIGRATION_FILE_RE.pattern
+                )
                 continue
             version = int(match.group('version'))
             ret = dict(
@@ -184,6 +188,12 @@ def _get_migrations_info_from_dir(base_dir):
                     '\nfirst : %s' % migration.filePath +
                     '\nsecond: %s' % migrations[version].filePath)
             migrations[version] = migration
+    else:
+        LOG.error(
+            "Could not find 'migrations' directory. Did you specify the "
+            "correct base_dir?"
+        )
+        raise MalformedMigration('Could not find migrations directory')
 
     return migrations
 
