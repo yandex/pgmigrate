@@ -189,10 +189,6 @@ def _get_migrations_info_from_dir(base_dir):
                     '\nsecond: %s' % migrations[version].filePath)
             migrations[version] = migration
     else:
-        LOG.error(
-            "Could not find 'migrations' directory. Did you specify the "
-            "correct base_dir?"
-        )
         raise MalformedMigration('Could not find migrations directory')
 
     return migrations
