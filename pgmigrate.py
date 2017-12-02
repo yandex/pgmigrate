@@ -787,8 +787,7 @@ def _main():
                         help='Say "rollback" in the end instead of "commit"')
     parser.add_argument('-l', '--termination_interval',
                         type=float,
-                        help='Inverval for terminating blocking pids '
-                             '(only for transational migrations)')
+                        help='Inverval for terminating blocking pids')
     parser.add_argument('-v', '--verbose',
                         default=0,
                         action='count',
