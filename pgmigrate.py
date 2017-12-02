@@ -71,7 +71,7 @@ class MalformedSchema(MigrateError):
     pass
 
 
-class ConfigParseError(MigrateError):
+class ConfigurationError(MigrateError):
     """
     Incorrect config or cmd args exception
     """
@@ -139,7 +139,7 @@ MIGRATION_FILE_RE = re.compile(
 )
 
 
-MigrationInfo = namedtuple('MigrationInfo', ('meta', 'filePath'))
+MigrationInfo = namedtuple('MigrationInfo', ('meta', 'file_path'))
 
 Callbacks = namedtuple('Callbacks', ('beforeAll', 'beforeEach',
                                      'afterEach', 'afterAll'))
@@ -157,36 +157,39 @@ def _get_migrations_info_from_dir(base_dir):
     """
     path = os.path.join(base_dir, 'migrations')
     migrations = {}
-    if os.path.exists(path) and os.path.isdir(path):
-        for fname in os.listdir(path):
-            file_path = os.path.join(path, fname)
-            if not os.path.isfile(file_path):
-                continue
-            match = MIGRATION_FILE_RE.match(fname)
-            if match is None:
-                continue
-            version = int(match.group('version'))
-            ret = dict(
-                version=version,
-                type='auto',
-                installed_by=None,
-                installed_on=None,
-                description=match.group('description').replace('_', ' '),
-            )
-            ret['transactional'] = 'NONTRANSACTIONAL' not in ret['description']
-            migration = MigrationInfo(
-                ret,
-                file_path,
-            )
-            if version in migrations:
-                raise MalformedMigration((
-                    'Found migrations with same version: {version} '
-                    '\nfirst : {first_path}'
-                    '\nsecond: {second_path}').format(
-                        version=version,
-                        first_path=migration.filePath,
-                        second_path=migrations[version].filePath))
-            migrations[version] = migration
+    if not (os.path.exists(path) and os.path.isdir(path)):
+        raise ConfigurationError(
+            'Migrations dir not found (expected to be {path})'.format(
+                path=path))
+    for fname in os.listdir(path):
+        file_path = os.path.join(path, fname)
+        if not os.path.isfile(file_path):
+            continue
+        match = MIGRATION_FILE_RE.match(fname)
+        if match is None:
+            continue
+        version = int(match.group('version'))
+        ret = dict(
+            version=version,
+            type='auto',
+            installed_by=None,
+            installed_on=None,
+            description=match.group('description').replace('_', ' '),
+        )
+        ret['transactional'] = 'NONTRANSACTIONAL' not in ret['description']
+        migration = MigrationInfo(
+            ret,
+            file_path,
+        )
+        if version in migrations:
+            raise MalformedMigration((
+                'Found migrations with same version: {version} '
+                '\nfirst : {first_path}'
+                '\nsecond: {second_path}').format(
+                    version=version,
+                    first_path=migration.file_path,
+                    second_path=migrations[version].file_path))
+        migrations[version] = migration
 
     return migrations
 
@@ -355,7 +358,7 @@ def _apply_version(version, base_dir, user, cursor):
     version_info = all_versions[version]
     LOG.info('Try apply version %r', version_info)
 
-    _apply_file(version_info.filePath, cursor)
+    _apply_file(version_info.file_path, cursor)
     cursor.execute('INSERT INTO public.schema_version '
                    '(version, description, installed_by) '
                    'VALUES (%s::bigint, %s, %s)',
@@ -371,11 +374,12 @@ def _parse_str_callbacks(callbacks, ret, base_dir):
             continue
         tokens = callback.split(':')
         if tokens[0] not in ret._fields:
-            raise ConfigParseError('Unexpected callback '
-                                   'type: {type}'.format(type=text(tokens[0])))
+            raise ConfigurationError(
+                'Unexpected callback '
+                'type: {type}'.format(type=text(tokens[0])))
         path = os.path.join(base_dir, tokens[1])
         if not os.path.exists(path):
-            raise ConfigParseError(
+            raise ConfigurationError(
                 'Path unavailable: {path}'.format(path=text(path)))
         if os.path.isdir(path):
             for fname in sorted(os.listdir(path)):
@@ -392,7 +396,7 @@ def _parse_dict_callbacks(callbacks, ret, base_dir):
             for j in callbacks[i]:
                 path = os.path.join(base_dir, j)
                 if not os.path.exists(path):
-                    raise ConfigParseError(
+                    raise ConfigurationError(
                         'Path unavailable: {path}'.format(path=text(path)))
                 if os.path.isdir(path):
                     for fname in sorted(os.listdir(path)):
@@ -400,7 +404,7 @@ def _parse_dict_callbacks(callbacks, ret, base_dir):
                 else:
                     getattr(ret, i).append(path)
         else:
-            raise ConfigParseError(
+            raise ConfigurationError(
                 'Unexpected callback type: {type}'.format(type=text(i)))
 
     return ret
@@ -657,7 +661,7 @@ def get_config(base_dir, args=None):
     if conf.user is None:
         conf = conf._replace(user=_get_database_user(conf.cursor))
     elif not conf.user:
-        raise ConfigParseError('Empty user name')
+        raise ConfigurationError('Empty user name')
 
     return conf
 

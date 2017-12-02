@@ -27,6 +27,12 @@ Feature: Handling migration errors
         And database has no schema_version table
         And migrate command failed with Unknown target
 
+    Scenario: Missing migrations subdir
+        Given migration dir
+        And removed migrations subdir
+        When we run pgmigrate with "-t 1 migrate"
+        Then migrate command failed with Migrations dir not found
+
     Scenario: Wrong schema_version structure
         Given migration dir
         And database and connection
