@@ -167,6 +167,9 @@ def _get_migrations_info_from_dir(base_dir):
             continue
         match = MIGRATION_FILE_RE.match(fname)
         if match is None:
+            LOG.warning(
+                'File %s does not match by pattern %s. Skipping it.',
+                file_path, MIGRATION_FILE_RE.pattern)
             continue
         version = int(match.group('version'))
         ret = dict(

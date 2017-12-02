@@ -19,6 +19,15 @@ foodb
 Every sql file has special operation on table `ops`.
 This will help in understanding what is going on in each pgmigrate run.
 
+## Migration file name pattern
+
+All migration files should have versions and
+names in the following format
+```
+V<version>__<description>.sql
+```
+Note: files not matching this pattern will be skipped.
+
 ## Creating `foo` user and `foodb`
 
 We'll need dummy user and database for our experiments.
