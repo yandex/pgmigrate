@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-'''
+"""
 PGmigrate - PostgreSQL migrations made easy
-'''
+"""
 # -*- coding: utf-8 -*-
 #
 #    Copyright (c) 2016-2017 Yandex LLC <https://github.com/yandex>
@@ -44,44 +44,44 @@ LOG = logging.getLogger(__name__)
 
 
 class MigrateError(RuntimeError):
-    '''
+    """
     Common migration error class
-    '''
+    """
     pass
 
 
 class MalformedStatement(MigrateError):
-    '''
+    """
     Incorrect statement exception
-    '''
+    """
     pass
 
 
 class MalformedMigration(MigrateError):
-    '''
+    """
     Incorrect migration exception
-    '''
+    """
     pass
 
 
 class MalformedSchema(MigrateError):
-    '''
+    """
     Incorrect schema exception
-    '''
+    """
     pass
 
 
 class ConfigParseError(MigrateError):
-    '''
+    """
     Incorrect config or cmd args exception
-    '''
+    """
     pass
 
 
 class BaselineError(MigrateError):
-    '''
+    """
     Baseline error class
-    '''
+    """
     pass
 
 
@@ -97,9 +97,9 @@ def _create_connection(conn_string):
 
 
 def _init_cursor(conn, session):
-    '''
+    """
     Get cursor initialized with session commands
-    '''
+    """
     cursor = conn.cursor()
     for query in session:
         cursor.execute(query)
@@ -109,33 +109,33 @@ def _init_cursor(conn, session):
 
 
 def _is_initialized(cursor):
-    '''
+    """
     Check that database is initialized
-    '''
-    query = cursor.mogrify('SELECT EXISTS(SELECT 1 FROM '
-                           'information_schema.tables '
-                           'WHERE table_schema = %s '
-                           'AND table_name = %s);',
-                           ('public', 'schema_version'))
-    cursor.execute(query)
+    """
+    cursor.execute('SELECT EXISTS(SELECT 1 FROM '
+                   'information_schema.tables '
+                   'WHERE table_schema = %s '
+                   'AND table_name = %s)',
+                   ('public', 'schema_version'))
     table_exists = cursor.fetchone()[0]
 
     if not table_exists:
         return False
 
-    cursor.execute('SELECT * from public.schema_version limit 1;')
+    cursor.execute('SELECT * from public.schema_version limit 1')
 
     colnames = [desc[0] for desc in cursor.description]
 
     if colnames != REF_COLUMNS:
-        raise MalformedSchema('Table schema_version has unexpected '
-                              'structure: %s' % '|'.join(colnames))
+        raise MalformedSchema(
+            'Table schema_version has unexpected '
+            'structure: {struct}'.format(struct='|'.join(colnames)))
 
     return True
 
 
 MIGRATION_FILE_RE = re.compile(
-    r'V(?P<version>\d+)__(?P<description>.+)\.sql$'
+    r'V(?P<version>\d+)__(?P<description>.+)\.sql$',
 )
 
 
@@ -152,9 +152,9 @@ CONFIG_IGNORE = ['cursor', 'conn_instance']
 
 
 def _get_migrations_info_from_dir(base_dir):
-    '''
+    """
     Get all migrations from base dir
-    '''
+    """
     path = os.path.join(base_dir, 'migrations')
     migrations = {}
     if os.path.exists(path) and os.path.isdir(path):
@@ -171,27 +171,30 @@ def _get_migrations_info_from_dir(base_dir):
                 type='auto',
                 installed_by=None,
                 installed_on=None,
-                description=match.group('description').replace('_', ' ')
+                description=match.group('description').replace('_', ' '),
             )
             ret['transactional'] = 'NONTRANSACTIONAL' not in ret['description']
             migration = MigrationInfo(
                 ret,
-                file_path
+                file_path,
             )
             if version in migrations:
-                raise MalformedMigration(
-                    'Found migrations with same version: %d ' % version +
-                    '\nfirst : %s' % migration.filePath +
-                    '\nsecond: %s' % migrations[version].filePath)
+                raise MalformedMigration((
+                    'Found migrations with same version: {version} '
+                    '\nfirst : {first_path}'
+                    '\nsecond: {second_path}').format(
+                        version=version,
+                        first_path=migration.filePath,
+                        second_path=migrations[version].filePath))
             migrations[version] = migration
 
     return migrations
 
 
 def _get_migrations_info(base_dir, baseline_v, target_v):
-    '''
+    """
     Get migrations from baseline to target from base dir
-    '''
+    """
     migrations = {}
     target = target_v if target_v is not None else float('inf')
 
@@ -201,19 +204,19 @@ def _get_migrations_info(base_dir, baseline_v, target_v):
         else:
             LOG.info(
                 'Ignore migration %r cause baseline: %r or target: %r',
-                ret, baseline_v, target
+                ret, baseline_v, target,
             )
     return migrations
 
 
 def _get_info(base_dir, baseline_v, target_v, cursor):
-    '''
+    """
     Get migrations info from database and base dir
-    '''
+    """
     ret = {}
-    cursor.execute('SELECT ' + ', '.join(REF_COLUMNS) +
-                   ' from public.schema_version;')
-
+    cursor.execute(
+        'SELECT {columns} FROM public.schema_version'.format(
+            columns=', '.join(REF_COLUMNS)))
     for i in cursor.fetchall():
         version = {}
         for j in enumerate(REF_COLUMNS):
@@ -243,69 +246,65 @@ def _get_database_user(cursor):
 
 
 def _get_state(base_dir, baseline_v, target, cursor):
-    '''
+    """
     Get info wrapper (able to handle noninitialized database)
-    '''
+    """
     if _is_initialized(cursor):
         return _get_info(base_dir, baseline_v, target, cursor)
-    else:
-        return _get_migrations_info(base_dir, baseline_v, target)
+    return _get_migrations_info(base_dir, baseline_v, target)
 
 
 def _set_baseline(baseline_v, user, cursor):
-    '''
+    """
     Cleanup schema_version and set baseline
-    '''
-    query = cursor.mogrify('SELECT EXISTS(SELECT 1 FROM public'
-                           '.schema_version WHERE version >= %s::bigint);',
-                           (baseline_v,))
-    cursor.execute(query)
+    """
+    cursor.execute('SELECT EXISTS(SELECT 1 FROM public'
+                   '.schema_version WHERE version >= %s::bigint)',
+                   (baseline_v,))
     check_failed = cursor.fetchone()[0]
 
     if check_failed:
-        raise BaselineError('Unable to baseline, version '
-                            '%s already applied' % text(baseline_v))
+        raise BaselineError(
+            'Unable to baseline, version '
+            '{version} already applied'.format(version=text(baseline_v)))
 
     LOG.info('cleaning up table schema_version')
-    cursor.execute('DELETE FROM public.schema_version;')
+    cursor.execute('DELETE FROM public.schema_version')
     LOG.info(cursor.statusmessage)
 
     LOG.info('setting baseline')
-    query = cursor.mogrify('INSERT INTO public.schema_version '
-                           '(version, type, description, installed_by) '
-                           'VALUES (%s::bigint, %s, %s, %s);',
-                           (text(baseline_v), 'manual',
-                            'Forced baseline', user))
-    cursor.execute(query)
+    cursor.execute('INSERT INTO public.schema_version '
+                   '(version, type, description, installed_by) '
+                   'VALUES (%s::bigint, %s, %s, %s)',
+                   (text(baseline_v), 'manual',
+                    'Forced baseline', user))
     LOG.info(cursor.statusmessage)
 
 
 def _init_schema(cursor):
-    '''
+    """
     Create schema_version table
-    '''
+    """
     LOG.info('creating type schema_version_type')
-    query = cursor.mogrify('CREATE TYPE public.schema_version_type '
-                           'AS ENUM (%s, %s);', ('auto', 'manual'))
-    cursor.execute(query)
+    cursor.execute('CREATE TYPE public.schema_version_type '
+                   'AS ENUM (%s, %s)', ('auto', 'manual'))
     LOG.info(cursor.statusmessage)
     LOG.info('creating table schema_version')
-    query = cursor.mogrify('CREATE TABLE public.schema_version ('
-                           'version BIGINT NOT NULL PRIMARY KEY, '
-                           'description TEXT NOT NULL, '
-                           'type public.schema_version_type NOT NULL '
-                           'DEFAULT %s, '
-                           'installed_by TEXT NOT NULL, '
-                           'installed_on TIMESTAMP WITHOUT time ZONE '
-                           'DEFAULT now() NOT NULL);', ('auto',))
-    cursor.execute(query)
+    cursor.execute('CREATE TABLE public.schema_version ('
+                   'version BIGINT NOT NULL PRIMARY KEY, '
+                   'description TEXT NOT NULL, '
+                   'type public.schema_version_type NOT NULL '
+                   'DEFAULT %s, '
+                   'installed_by TEXT NOT NULL, '
+                   'installed_on TIMESTAMP WITHOUT time ZONE '
+                   'DEFAULT now() NOT NULL)', ('auto',))
     LOG.info(cursor.statusmessage)
 
 
 def _get_statements(path):
-    '''
+    """
     Get statements from file
-    '''
+    """
     with codecs.open(path, encoding='utf-8') as i:
         data = i.read()
     if u'/* pgmigrate-encoding: utf-8 */' not in data:
@@ -323,9 +322,9 @@ def _get_statements(path):
 
 
 def _apply_statement(statement, cursor):
-    '''
+    """
     Execute statement using cursor
-    '''
+    """
     try:
         cursor.execute(statement)
     except psycopg2.Error as exc:
@@ -337,9 +336,9 @@ def _apply_statement(statement, cursor):
 
 
 def _apply_file(file_path, cursor):
-    '''
+    """
     Execute all statements in file
-    '''
+    """
     try:
         for statement in _get_statements(file_path):
             _apply_statement(statement, cursor)
@@ -349,21 +348,20 @@ def _apply_file(file_path, cursor):
 
 
 def _apply_version(version, base_dir, user, cursor):
-    '''
+    """
     Execute all statements in migration version
-    '''
+    """
     all_versions = _get_migrations_info_from_dir(base_dir)
     version_info = all_versions[version]
     LOG.info('Try apply version %r', version_info)
 
     _apply_file(version_info.filePath, cursor)
-    query = cursor.mogrify('INSERT INTO public.schema_version '
-                           '(version, description, installed_by) '
-                           'VALUES (%s::bigint, %s, %s)',
-                           (text(version),
-                            version_info.meta['description'],
-                            user))
-    cursor.execute(query)
+    cursor.execute('INSERT INTO public.schema_version '
+                   '(version, description, installed_by) '
+                   'VALUES (%s::bigint, %s, %s)',
+                   (text(version),
+                    version_info.meta['description'],
+                    user))
 
 
 def _parse_str_callbacks(callbacks, ret, base_dir):
@@ -374,10 +372,11 @@ def _parse_str_callbacks(callbacks, ret, base_dir):
         tokens = callback.split(':')
         if tokens[0] not in ret._fields:
             raise ConfigParseError('Unexpected callback '
-                                   'type: %s' % text(tokens[0]))
+                                   'type: {type}'.format(type=text(tokens[0])))
         path = os.path.join(base_dir, tokens[1])
         if not os.path.exists(path):
-            raise ConfigParseError('Path unavailable: %s' % text(path))
+            raise ConfigParseError(
+                'Path unavailable: {path}'.format(path=text(path)))
         if os.path.isdir(path):
             for fname in sorted(os.listdir(path)):
                 getattr(ret, tokens[0]).append(os.path.join(path, fname))
@@ -393,36 +392,37 @@ def _parse_dict_callbacks(callbacks, ret, base_dir):
             for j in callbacks[i]:
                 path = os.path.join(base_dir, j)
                 if not os.path.exists(path):
-                    raise ConfigParseError('Path unavailable: %s' % text(path))
+                    raise ConfigParseError(
+                        'Path unavailable: {path}'.format(path=text(path)))
                 if os.path.isdir(path):
                     for fname in sorted(os.listdir(path)):
                         getattr(ret, i).append(os.path.join(path, fname))
                 else:
                     getattr(ret, i).append(path)
         else:
-            raise ConfigParseError('Unexpected callback type: %s' % text(i))
+            raise ConfigParseError(
+                'Unexpected callback type: {type}'.format(type=text(i)))
 
     return ret
 
 
 def _get_callbacks(callbacks, base_dir=''):
-    '''
+    """
     Parse cmdline/config callbacks
-    '''
+    """
     ret = Callbacks(beforeAll=[],
                     beforeEach=[],
                     afterEach=[],
                     afterAll=[])
     if isinstance(callbacks, dict):
         return _parse_dict_callbacks(callbacks, ret, base_dir)
-    else:
-        return _parse_str_callbacks(callbacks, ret, base_dir)
+    return _parse_str_callbacks(callbacks, ret, base_dir)
 
 
 def _migrate_step(state, callbacks, base_dir, user, cursor):
-    '''
+    """
     Apply one version with callbacks
-    '''
+    """
     before_all_executed = False
     should_migrate = False
     if not _is_initialized(cursor):
@@ -469,9 +469,9 @@ def _finish(config):
 
 
 def info(config, stdout=True):
-    '''
+    """
     Info cmdline wrapper
-    '''
+    """
     state = _get_state(config.base_dir, config.baseline,
                        config.target, config.cursor)
     if stdout:
@@ -487,23 +487,23 @@ def info(config, stdout=True):
 
 
 def clean(config):
-    '''
+    """
     Drop schema_version table
-    '''
+    """
     if _is_initialized(config.cursor):
         LOG.info('dropping schema_version')
-        config.cursor.execute('DROP TABLE public.schema_version;')
+        config.cursor.execute('DROP TABLE public.schema_version')
         LOG.info(config.cursor.statusmessage)
         LOG.info('dropping schema_version_type')
-        config.cursor.execute('DROP TYPE public.schema_version_type;')
+        config.cursor.execute('DROP TYPE public.schema_version_type')
         LOG.info(config.cursor.statusmessage)
         _finish(config)
 
 
 def baseline(config):
-    '''
+    """
     Set baseline cmdline wrapper
-    '''
+    """
     if not _is_initialized(config.cursor):
         _init_schema(config.cursor)
     _set_baseline(config.baseline, config.user, config.cursor)
@@ -521,7 +521,7 @@ def _prepare_nontransactional_steps(state, callbacks):
                 steps.append(i)
                 i = {'state': {},
                      'cbs': _get_callbacks('')}
-            elif len(steps) == 0:
+            elif not steps:
                 LOG.error('First migration MUST be transactional')
                 raise MalformedMigration('First migration MUST '
                                          'be transactional')
@@ -552,9 +552,9 @@ def _prepare_nontransactional_steps(state, callbacks):
 
 
 def migrate(config):
-    '''
+    """
     Migrate cmdline wrapper
-    '''
+    """
     if config.target is None:
         LOG.error('Unknown target (you could use "latest" to '
                   'use latest available version)')
@@ -565,7 +565,7 @@ def migrate(config):
     not_applied = [x for x in state if state[x]['installed_on'] is None]
     non_trans = [x for x in not_applied if not state[x]['transactional']]
 
-    if len(non_trans) > 0:
+    if non_trans:
         if config.dryrun:
             LOG.error('Dry run for nontransactional migrations '
                       'is nonsence')
@@ -577,7 +577,7 @@ def migrate(config):
                           'nontransactional migrations')
                 raise MigrateError('Unable to mix transactional and '
                                    'nontransactional migrations')
-            config.cursor.execute('rollback;')
+            config.cursor.execute('rollback')
             nt_conn = _create_connection(config.conn)
             nt_conn.autocommit = True
             cursor = _init_cursor(nt_conn, config.session)
@@ -624,9 +624,9 @@ CONFIG_DEFAULTS = Config(target=None, baseline=0, cursor=None, dryrun=False,
 
 
 def get_config(base_dir, args=None):
-    '''
+    """
     Load configuration from yml in base dir with respect of args
-    '''
+    """
     path = os.path.join(base_dir, 'migrations.yml')
     try:
         with codecs.open(path, encoding='utf-8') as i:
@@ -663,9 +663,9 @@ def get_config(base_dir, args=None):
 
 
 def _main():
-    '''
+    """
     Main function
-    '''
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument('cmd',
