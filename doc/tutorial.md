@@ -370,3 +370,26 @@ lock timeout to 30 seconds one could do something like this:
 pgmigrate -s "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE" \
     -s "SET lock_timeout = '30s'" ...
 ```
+
+## Terminating blocking pids
+
+On heavy loaded production environments running some migrations
+could block queries by application backends.
+Unfortunately if migration is blocked by some other query it could lead
+to really slow database queries.
+For example lock queue like this:
+```
+<lots of app backends>
+<pgmigrate>
+<stale backend in idle in transaction>
+```
+makes database almost unavailable for at least `idle_in_transaction_timeout`.
+To mitigate such issues there is `-l <interval>` option in pgmigrate
+which starts separate thread running `pg_terminate_backend(pid)` for
+each pid blocking any of pgmigrate conn pids every `interval` seconds.
+Of course pgmigrate should be able to terminate other pids so migration user
+should be the app user or have `pg_signal_backend` grant. To terminate
+superuser (e.g. `postgres`) pids one could run pgmigrate with superuser.
+
+Note: this feature relays on `pg_blocking_pids()` function available since
+PostgreSQL 9.6.

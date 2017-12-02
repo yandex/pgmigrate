@@ -32,8 +32,11 @@ import logging
 import os
 import re
 import sys
+import threading
+import time
 from builtins import str as text
 from collections import OrderedDict, namedtuple
+from contextlib import closing
 
 import psycopg2
 import sqlparse
@@ -85,13 +88,69 @@ class BaselineError(MigrateError):
     pass
 
 
+class ConflictTerminator(threading.Thread):
+    """
+    Kills conflicting pids (only on postgresql > 9.6)
+    """
+    def __init__(self, conn_str, interval):
+        threading.Thread.__init__(self, name='terminator')
+        self.daemon = True
+        self.log = logging.getLogger('terminator')
+        self.conn_str = conn_str
+        self.pids = set()
+        self.interval = interval
+        self.should_run = True
+        self.conn = None
+
+    def stop(self):
+        """
+        Stop iterations and close connection
+        """
+        self.should_run = False
+
+    def add_conn(self, conn):
+        """
+        Add conn pid to pgmirate pids list
+        """
+        self.pids.add(conn.get_backend_pid())
+
+    def remove_conn(self, conn):
+        """
+        Remove conn from pgmigrate pids list
+        """
+        self.pids.remove(conn.get_backend_pid())
+
+    def run(self):
+        """
+        Periodically terminate all backends blocking pgmigrate pids
+        """
+        self.conn = _create_raw_connection(self.conn_str, self.log)
+        self.conn.autocommit = True
+        while self.should_run:
+            with self.conn.cursor() as cursor:
+                for pid in self.pids:
+                    cursor.execute(
+                        'SELECT pg_terminate_backend(pid) FROM '
+                        'unnest(pg_blocking_pids(%s)) AS pid',
+                        (pid,))
+            time.sleep(self.interval)
+
+
 REF_COLUMNS = ['version', 'description', 'type',
                'installed_by', 'installed_on']
 
 
-def _create_connection(conn_string):
+def _create_raw_connection(conn_string, logger=LOG):
     conn = psycopg2.connect(conn_string, connection_factory=LoggingConnection)
-    conn.initialize(LOG)
+    conn.initialize(logger)
+
+    return conn
+
+
+def _create_connection(config):
+    conn = _create_raw_connection(config.conn)
+    if config.terminator_instance:
+        config.terminator_instance.add_conn(conn)
 
     return conn
 
@@ -146,9 +205,10 @@ Callbacks = namedtuple('Callbacks', ('beforeAll', 'beforeEach',
 
 Config = namedtuple('Config', ('target', 'baseline', 'cursor', 'dryrun',
                                'callbacks', 'user', 'base_dir', 'conn',
-                               'session', 'conn_instance'))
+                               'session', 'conn_instance',
+                               'terminator_instance', 'termination_interval'))
 
-CONFIG_IGNORE = ['cursor', 'conn_instance']
+CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
 
 
 def _get_migrations_info_from_dir(base_dir):
@@ -473,6 +533,9 @@ def _finish(config):
         config.cursor.execute('rollback')
     else:
         config.cursor.execute('commit')
+    if config.terminator_instance:
+        config.terminator_instance.stop()
+    config.conn_instance.close()
 
 
 def info(config, stdout=True):
@@ -558,6 +621,21 @@ def _prepare_nontransactional_steps(state, callbacks):
     return steps
 
 
+def _execute_mixed_steps(config, steps, nt_conn):
+    commit_req = False
+    for step in steps:
+        if commit_req:
+            config.cursor.execute('commit')
+            commit_req = False
+        if not list(step['state'].values())[0]['transactional']:
+            cur = _init_cursor(nt_conn, config.session)
+        else:
+            cur = config.cursor
+            commit_req = True
+        _migrate_step(step['state'], step['cbs'],
+                      config.base_dir, config.user, cur)
+
+
 def migrate(config):
     """
     Migrate cmdline wrapper
@@ -585,29 +663,23 @@ def migrate(config):
                 raise MigrateError('Unable to mix transactional and '
                                    'nontransactional migrations')
             config.cursor.execute('rollback')
-            nt_conn = _create_connection(config.conn)
-            nt_conn.autocommit = True
-            cursor = _init_cursor(nt_conn, config.session)
-            _migrate_step(state, _get_callbacks(''),
-                          config.base_dir, config.user, cursor)
+            with closing(_create_connection(config)) as nt_conn:
+                nt_conn.autocommit = True
+                cursor = _init_cursor(nt_conn, config.session)
+                _migrate_step(state, _get_callbacks(''),
+                              config.base_dir, config.user, cursor)
+                if config.terminator_instance:
+                    config.terminator_instance.remove_conn(nt_conn)
         else:
             steps = _prepare_nontransactional_steps(state, config.callbacks)
 
-            nt_conn = _create_connection(config.conn)
-            nt_conn.autocommit = True
+            with closing(_create_connection(config)) as nt_conn:
+                nt_conn.autocommit = True
 
-            commit_req = False
-            for step in steps:
-                if commit_req:
-                    config.cursor.execute('commit')
-                    commit_req = False
-                if not list(step['state'].values())[0]['transactional']:
-                    cur = _init_cursor(nt_conn, config.session)
-                else:
-                    cur = config.cursor
-                    commit_req = True
-                _migrate_step(step['state'], step['cbs'],
-                              config.base_dir, config.user, cur)
+                _execute_mixed_steps(config, steps, nt_conn)
+
+                if config.terminator_instance:
+                    config.terminator_instance.remove_conn(nt_conn)
     else:
         _migrate_step(state, config.callbacks, config.base_dir,
                       config.user, config.cursor)
@@ -627,7 +699,9 @@ CONFIG_DEFAULTS = Config(target=None, baseline=0, cursor=None, dryrun=False,
                          session=['SET lock_timeout = 0'],
                          conn='dbname=postgres user=postgres '
                               'connect_timeout=1',
-                         conn_instance=None)
+                         conn_instance=None,
+                         terminator_instance=None,
+                         termination_interval=None)
 
 
 def get_config(base_dir, args=None):
@@ -656,7 +730,13 @@ def get_config(base_dir, args=None):
         else:
             conf = conf._replace(target=int(conf.target))
 
-    conf = conf._replace(conn_instance=_create_connection(conf.conn))
+    if conf.termination_interval and not conf.dryrun:
+        conf = conf._replace(
+            terminator_instance=ConflictTerminator(
+                conf.conn, conf.termination_interval))
+        conf.terminator_instance.start()
+
+    conf = conf._replace(conn_instance=_create_connection(conf))
     conf = conf._replace(cursor=_init_cursor(conf.conn_instance, conf.session))
     conf = conf._replace(callbacks=_get_callbacks(conf.callbacks,
                                                   conf.base_dir))
@@ -705,6 +785,10 @@ def _main():
     parser.add_argument('-n', '--dryrun',
                         action='store_true',
                         help='Say "rollback" in the end instead of "commit"')
+    parser.add_argument('-l', '--termination_interval',
+                        type=float,
+                        help='Inverval for terminating blocking pids '
+                             '(only for transational migrations)')
     parser.add_argument('-v', '--verbose',
                         default=0,
                         action='count',

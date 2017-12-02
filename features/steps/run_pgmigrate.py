@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 import yaml
+from func_timeout import FunctionTimedOut, func_timeout
 
 from behave import given, then, when
 
@@ -15,7 +16,11 @@ def run_pgmigrate(migr_dir, args):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
 
-    stdout, stderr = p.communicate()
+    try:
+        stdout, stderr = func_timeout(5, p.communicate)
+    except FunctionTimedOut:
+        p.terminate()
+        stdout, stderr = p.communicate()
     return p.returncode, str(stdout), str(stderr)
 
 @given('successful pgmigrate run with "{args}"')
