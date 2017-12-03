@@ -130,9 +130,12 @@ class ConflictTerminator(threading.Thread):
             with self.conn.cursor() as cursor:
                 for pid in self.pids:
                     cursor.execute(
-                        'SELECT pg_terminate_backend(pid) FROM '
+                        'SELECT pid, pg_terminate_backend(pid) FROM '
                         'unnest(pg_blocking_pids(%s)) AS pid',
                         (pid,))
+                    terminated = [x[0] for x in cursor.fetchall()]
+                    for i in terminated:
+                        self.log.info('Terminated conflicting pid: %s', i)
             time.sleep(self.interval)
 
 
