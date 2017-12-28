@@ -16,7 +16,7 @@ ENV PG_MAJOR 10
 
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 
-RUN add-apt-repository ppa:fkrull/deadsnakes
+RUN add-apt-repository ppa:jonathonf/python-3.6
 
 RUN apt-get update \
     && apt-get install -y postgresql-common \
