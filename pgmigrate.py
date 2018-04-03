@@ -214,6 +214,15 @@ Config = namedtuple('Config', ('target', 'baseline', 'cursor', 'dryrun',
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
 
 
+def _get_files_from_dir(path):
+    """
+    Get all files in all subdirs in path
+    """
+    for root, _, files in os.walk(path):
+        for fname in files:
+            yield fname, os.path.join(root, fname)
+
+
 def _get_migrations_info_from_dir(base_dir):
     """
     Get all migrations from base dir
@@ -224,10 +233,7 @@ def _get_migrations_info_from_dir(base_dir):
         raise ConfigurationError(
             'Migrations dir not found (expected to be {path})'.format(
                 path=path))
-    for fname in os.listdir(path):
-        file_path = os.path.join(path, fname)
-        if not os.path.isfile(file_path):
-            continue
+    for fname, file_path in _get_files_from_dir(path):
         match = MIGRATION_FILE_RE.match(fname)
         if match is None:
             LOG.warning(
