@@ -220,7 +220,7 @@ def _get_files_from_dir(path):
     """
     for root, _, files in os.walk(path):
         for fname in files:
-            yield fname, os.path.join(root, fname)
+            yield os.path.basename(fname), os.path.join(root, fname)
 
 
 def _get_migrations_info_from_dir(base_dir):
