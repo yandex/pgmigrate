@@ -11,6 +11,15 @@ Feature: Getting migrations from dir
            | V1__Single_migration.sql | SELECT 1; |
         Then migration list equals single transactional migration
 
+    Scenario: Two migrations with custom pattern
+        Given migration dir
+        And migrations
+           | file                         | code      |
+           | First_migration_ver0001.sql  | SELECT 1; |
+           | some_trash.sql               | SELECT 1; |
+           | Second_migration_ver0002.sql | SELECT 1; |
+        Then migration list with custom pattern equals couple transactional migrations
+
     Scenario: Garbage migrations are properly ignored
         Given migration dir
         And migrations

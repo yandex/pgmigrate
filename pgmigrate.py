@@ -196,19 +196,14 @@ def _is_initialized(cursor):
     return True
 
 
-MIGRATION_FILE_RE = re.compile(
-    r'V(?P<version>\d+)__(?P<description>.+)\.sql$',
-)
-
-
 MigrationInfo = namedtuple('MigrationInfo', ('meta', 'file_path'))
 
 Callbacks = namedtuple('Callbacks', ('beforeAll', 'beforeEach',
                                      'afterEach', 'afterAll'))
 
 Config = namedtuple('Config', ('target', 'baseline', 'cursor', 'dryrun',
-                               'callbacks', 'user', 'base_dir', 'conn',
-                               'session', 'conn_instance',
+                               'callbacks', 'user', 'base_dir', 'pattern',
+                               'conn', 'session', 'conn_instance',
                                'terminator_instance', 'termination_interval'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
@@ -223,7 +218,7 @@ def _get_files_from_dir(path):
             yield os.path.basename(fname), os.path.join(root, fname)
 
 
-def _get_migrations_info_from_dir(base_dir):
+def _get_migrations_info_from_dir(base_dir, pattern):
     """
     Get all migrations from base dir
     """
@@ -234,11 +229,12 @@ def _get_migrations_info_from_dir(base_dir):
             'Migrations dir not found (expected to be {path})'.format(
                 path=path))
     for fname, file_path in _get_files_from_dir(path):
-        match = MIGRATION_FILE_RE.match(fname)
+        pattern_regex = re.compile(pattern)
+        match = pattern_regex.match(fname)
         if match is None:
             LOG.warning(
                 'File %s does not match by pattern %s. Skipping it.',
-                file_path, MIGRATION_FILE_RE.pattern)
+                file_path, pattern_regex.pattern)
             continue
         version = int(match.group('version'))
         ret = dict(
@@ -266,14 +262,15 @@ def _get_migrations_info_from_dir(base_dir):
     return migrations
 
 
-def _get_migrations_info(base_dir, baseline_v, target_v):
+def _get_migrations_info(base_dir, baseline_v, target_v, pattern):
     """
     Get migrations from baseline to target from base dir
     """
     migrations = {}
     target = target_v if target_v is not None else float('inf')
 
-    for version, ret in _get_migrations_info_from_dir(base_dir).items():
+    for version, ret in _get_migrations_info_from_dir(base_dir,
+                                                      pattern).items():
         if version > baseline_v and version <= target:
             migrations[version] = ret.meta
         else:
@@ -284,15 +281,15 @@ def _get_migrations_info(base_dir, baseline_v, target_v):
     return migrations
 
 
-def _get_info(base_dir, baseline_v, target_v, cursor):
+def _get_info(config, baseline_v):
     """
     Get migrations info from database and base dir
     """
     ret = {}
-    cursor.execute(
+    config.cursor.execute(
         'SELECT {columns} FROM public.schema_version'.format(
             columns=', '.join(REF_COLUMNS)))
-    for i in cursor.fetchall():
+    for i in config.cursor.fetchall():
         version = {}
         for j in enumerate(REF_COLUMNS):
             if j[1] == 'installed_on':
@@ -304,9 +301,10 @@ def _get_info(base_dir, baseline_v, target_v, cursor):
         version['transactional'] = transactional
         ret[version['version']] = version
 
-        baseline_v = max(baseline_v, sorted(ret.keys())[-1])
+        baseline_v = max(int(baseline_v), sorted(ret.keys())[-1])
 
-    migrations_info = _get_migrations_info(base_dir, baseline_v, target_v)
+    migrations_info = _get_migrations_info(config.base_dir, baseline_v,
+                                           config.target, config.pattern)
     for version in migrations_info:
         num = migrations_info[version]['version']
         if num not in ret:
@@ -320,13 +318,14 @@ def _get_database_user(cursor):
     return cursor.fetchone()[0]
 
 
-def _get_state(base_dir, baseline_v, target, cursor):
+def _get_state(config):
     """
     Get info wrapper (able to handle noninitialized database)
     """
-    if _is_initialized(cursor):
-        return _get_info(base_dir, baseline_v, target, cursor)
-    return _get_migrations_info(base_dir, baseline_v, target)
+    if _is_initialized(config.cursor):
+        return _get_info(config, config.baseline)
+    return _get_migrations_info(config.base_dir, config.baseline,
+                                config.target, config.pattern)
 
 
 def _set_baseline(baseline_v, user, cursor):
@@ -422,11 +421,11 @@ def _apply_file(file_path, cursor):
         raise exc
 
 
-def _apply_version(version, base_dir, user, cursor):
+def _apply_version(version, base_dir, pattern, user, cursor):
     """
     Execute all statements in migration version
     """
-    all_versions = _get_migrations_info_from_dir(base_dir)
+    all_versions = _get_migrations_info_from_dir(base_dir, pattern)
     version_info = all_versions[version]
     LOG.info('Try apply version %r', version_info)
 
@@ -495,7 +494,7 @@ def _get_callbacks(callbacks, base_dir=''):
     return _parse_str_callbacks(callbacks, ret, base_dir)
 
 
-def _migrate_step(state, callbacks, base_dir, user, cursor):
+def _migrate_step(state, callbacks, config, cursor):
     """
     Apply one version with callbacks
     """
@@ -522,7 +521,8 @@ def _migrate_step(state, callbacks, base_dir, user, cursor):
                     LOG.info(callback)
                     _apply_file(callback, cursor)
 
-            _apply_version(version, base_dir, user, cursor)
+            _apply_version(version, config.base_dir,
+                           config.pattern, config.user, cursor)
 
             if callbacks.afterEach:
                 LOG.info('Executing afterEach callbacks:')
@@ -551,8 +551,7 @@ def info(config, stdout=True):
     """
     Info cmdline wrapper
     """
-    state = _get_state(config.base_dir, config.baseline,
-                       config.target, config.cursor)
+    state = _get_state(config)
     if stdout:
         out_state = OrderedDict()
         for version in sorted(state, key=int):
@@ -641,8 +640,7 @@ def _execute_mixed_steps(config, steps, nt_conn):
         else:
             cur = config.cursor
             commit_req = True
-        _migrate_step(step['state'], step['cbs'],
-                      config.base_dir, config.user, cur)
+        _migrate_step(step['state'], step['cbs'], config, cur)
 
 
 def migrate(config):
@@ -654,8 +652,7 @@ def migrate(config):
                   'use latest available version)')
         raise MigrateError('Unknown target')
 
-    state = _get_state(config.base_dir, config.baseline,
-                       config.target, config.cursor)
+    state = _get_state(config)
     not_applied = [x for x in state if state[x]['installed_on'] is None]
     non_trans = [x for x in not_applied if not state[x]['transactional']]
 
@@ -675,8 +672,7 @@ def migrate(config):
             with closing(_create_connection(config)) as nt_conn:
                 nt_conn.autocommit = True
                 cursor = _init_cursor(nt_conn, config.session)
-                _migrate_step(state, _get_callbacks(''),
-                              config.base_dir, config.user, cursor)
+                _migrate_step(state, _get_callbacks(''), config, cursor)
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
         else:
@@ -690,8 +686,7 @@ def migrate(config):
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
     else:
-        _migrate_step(state, config.callbacks, config.base_dir,
-                      config.user, config.cursor)
+        _migrate_step(state, config.callbacks, config, config.cursor)
 
     _finish(config)
 
@@ -704,8 +699,10 @@ COMMANDS = {
 }
 
 CONFIG_DEFAULTS = Config(target=None, baseline=0, cursor=None, dryrun=False,
-                         callbacks='', base_dir='', user=None,
-                         session=['SET lock_timeout = 0'],
+                         callbacks='', base_dir='',
+                         pattern=r'V(?P<version>\d+)__'
+                                 r'(?P<description>.+)\.sql$',
+                         user=None, session=['SET lock_timeout = 0'],
                          conn='dbname=postgres user=postgres '
                               'connect_timeout=1',
                          conn_instance=None,
@@ -778,6 +775,13 @@ def _main():
                         type=str,
                         default='',
                         help='Migrations base dir')
+    parser.add_argument('-p', '--pattern',
+                        type=str,
+                        default=r'V(?P<version>\d+)__'
+                                r'(?P<description>.+)\.sql$',
+                        help=r'Migrations filename pattern, '
+                             r'default value is '
+                             r'V(?P<version>\d+)__(?P<description>.+)\.sql$')
     parser.add_argument('-u', '--user',
                         type=str,
                         help='Override database user in migration info')
