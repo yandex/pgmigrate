@@ -1,10 +1,10 @@
 from behave import then
-from pgmigrate import _get_migrations_info_from_dir
+from pgmigrate import _get_migrations_info_from_dir, DEFAULT_MIGRATION_RE
 
 
 @then('migration list equals single transactional migration')
 def step_impl(context):
-    pattern = r'V(?P<version>\d+)__(?P<description>.+)\.sql$'
+    pattern = DEFAULT_MIGRATION_RE
     assert len(_get_migrations_info_from_dir(context.migr_dir,
                                              pattern).keys()) == 1
     migration = list(_get_migrations_info_from_dir(context.migr_dir,

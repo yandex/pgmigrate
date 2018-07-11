@@ -698,10 +698,11 @@ COMMANDS = {
     'migrate': migrate,
 }
 
+DEFAULT_MIGRATION_RE = r'V(?P<version>\d+)__(?P<description>.+)\.sql$'
+
 CONFIG_DEFAULTS = Config(target=None, baseline=0, cursor=None, dryrun=False,
                          callbacks='', base_dir='',
-                         pattern=r'V(?P<version>\d+)__'
-                                 r'(?P<description>.+)\.sql$',
+                         pattern=DEFAULT_MIGRATION_RE,
                          user=None, session=['SET lock_timeout = 0'],
                          conn='dbname=postgres user=postgres '
                               'connect_timeout=1',
@@ -777,11 +778,9 @@ def _main():
                         help='Migrations base dir')
     parser.add_argument('-p', '--pattern',
                         type=str,
-                        default=r'V(?P<version>\d+)__'
-                                r'(?P<description>.+)\.sql$',
+                        default=DEFAULT_MIGRATION_RE,
                         help=r'Migrations filename pattern, '
-                             r'default value is '
-                             r'V(?P<version>\d+)__(?P<description>.+)\.sql$')
+                             r'default value is ' + DEFAULT_MIGRATION_RE)
     parser.add_argument('-u', '--user',
                         type=str,
                         help='Override database user in migration info')
