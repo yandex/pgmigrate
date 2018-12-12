@@ -5,6 +5,6 @@ from pgmigrate import _get_info
 @then("migration info contains single migration")
 def step_impl(context):
     cur = context.conn.cursor()
-    info = _get_info(context.migr_dir, 0, 1, cur)
+    info = _get_info(context.migr_dir, 0, 1, cur, schema='public')
     assert list(info.values())[0]['version'] == 1
     assert list(info.values())[0]['description'] == 'Single migration'
