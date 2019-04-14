@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
 
-ENV PG_MAJOR 10
+ENV PG_MAJOR 11
 
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 
