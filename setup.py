@@ -4,8 +4,8 @@ setup.py for pgmigrate
 """
 # encoding: utf-8
 #
-#    Copyright (c) 2016-2018 Yandex LLC <https://github.com/yandex>
-#    Copyright (c) 2016-2018 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2016-2019 Yandex LLC <https://github.com/yandex>
+#    Copyright (c) 2016-2019 Other contributors as noted in the AUTHORS file.
 #
 #    Permission to use, copy, modify, and distribute this software and its
 #    documentation for any purpose, without fee, and without a written
@@ -30,32 +30,30 @@ try:
 except ImportError:
     from distutils import setup
 
-
 REQUIREMENTS = [
-    'sqlparse >= 0.2.1',
-    'psycopg2 >= 2.6.2',
-    'PyYAML >= 3.12'
-    ]
+    'sqlparse >= 0.3.0',
+    'psycopg2 >= 2.8.2',
+    'PyYAML >= 5.1',
+]
 
 if sys.version_info < (3, 0):
-    REQUIREMENTS.append('future >= 0.15.2')
+    REQUIREMENTS.append('future >= 0.17.1')
 
 setup(
-    name="yandex-pgmigrate",
-    version="1.0.3",
-    description="PostgreSQL migrations made easy",
-    license="PostgreSQL License",
-    url="https://github.com/yandex/pgmigrate/",
+    name='yandex-pgmigrate',
+    version='1.0.4',
+    description='PostgreSQL migrations made easy',
+    license='PostgreSQL License',
+    url='https://github.com/yandex/pgmigrate/',
     author='Yandex LLC',
     author_email='opensource@yandex-team.ru',
     maintainer='Yandex LLC',
     maintainer_email='opensource@yandex-team.ru',
     zip_safe=False,
-    platforms=["Linux", "BSD", "MacOS"],
+    platforms=['Linux', 'BSD', 'MacOS'],
     packages=['.'],
-    entry_points={
-        'console_scripts': [
-            'pgmigrate = pgmigrate:_main',
-        ]},
+    entry_points={'console_scripts': [
+        'pgmigrate = pgmigrate:_main',
+    ]},
     install_requires=REQUIREMENTS,
 )

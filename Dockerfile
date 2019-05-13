@@ -11,16 +11,16 @@ RUN apt-get update && apt-get install -y software-properties-common locales && \
 ENV LANG en_US.utf8
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
-
-ENV PG_MAJOR 10
+ENV PG_MAJOR 11
 
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 
-RUN apt-get update \
+RUN apt-get -o Acquire::AllowInsecureRepositories=true \
+        -o Acquire::AllowDowngradeToInsecureRepositories=true update \
     && apt-get \
         -o Dpkg::Options::="--force-confdef" \
         -o Dpkg::Options::="--force-confold" \
+        -o APT::Get::AllowUnauthenticated=true \
         install -y postgresql-common \
         sudo \
         libpq-dev \

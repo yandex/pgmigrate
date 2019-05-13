@@ -40,18 +40,19 @@ def step_impl(context):
 @given('successful pgmigrate run with our callbacks and "{args}"')  # noqa
 def step_impl(context, args):
     cbs = ','.join(context.callbacks)
-    context.execute_steps('given successful pgmigrate run with ' +
-                          '"%s"' % ('-a ' + cbs + ' ' + args,))
+    context.execute_steps('given successful pgmigrate run with ' + '"%s"' %
+                          ('-a ' + cbs + ' ' + args, ))
 
 
 @when('we run pgmigrate with our callbacks and "{args}"')  # noqa
 def step_impl(context, args):
     cbs = ','.join(context.callbacks)
-    context.execute_steps('when we run pgmigrate with ' +
-                          '"%s"' % ('-a ' + cbs + ' ' + args,))
+    context.execute_steps('when we run pgmigrate with ' + '"%s"' %
+                          ('-a ' + cbs + ' ' + args, ))
 
 
-@when('we run pgmigrate with dir callbacks and type "{cb_type}" and "{args}"')  # noqa
+@when('we run pgmigrate with dir callbacks and type "{cb_type}" and "{args}"'
+      )  # noqa
 def step_impl(context, cb_type, args):
     p_args = '-a ' + cb_type + ':' + context.migr_dir + '/callbacks/ ' + args
-    context.execute_steps('when we run pgmigrate with "%s"' % (p_args,))
+    context.execute_steps('when we run pgmigrate with "%s"' % (p_args, ))

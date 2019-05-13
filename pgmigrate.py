@@ -4,8 +4,8 @@ PGmigrate - PostgreSQL migrations made easy
 """
 # -*- coding: utf-8 -*-
 #
-#    Copyright (c) 2016-2017 Yandex LLC <https://github.com/yandex>
-#    Copyright (c) 2016-2017 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2016-2019 Yandex LLC <https://github.com/yandex>
+#    Copyright (c) 2016-2019 Other contributors as noted in the AUTHORS file.
 #
 #    Permission to use, copy, modify, and distribute this software and its
 #    documentation for any purpose, without fee, and without a written
@@ -746,21 +746,20 @@ COMMANDS = {
     'migrate': migrate,
 }
 
-CONFIG_DEFAULTS = Config(
-    target=None,
-    baseline=0,
-    cursor=None,
-    dryrun=False,
-    callbacks='',
-    base_dir='',
-    user=None,
-    session=['SET lock_timeout = 0'],
-    conn='dbname=postgres user=postgres '
-    'connect_timeout=1',
-    conn_instance=None,
-    terminator_instance=None,
-    termination_interval=None,
-    schema='public')
+CONFIG_DEFAULTS = Config(target=None,
+                         baseline=0,
+                         cursor=None,
+                         dryrun=False,
+                         callbacks='',
+                         base_dir='',
+                         user=None,
+                         session=['SET lock_timeout = 0'],
+                         conn='dbname=postgres user=postgres '
+                         'connect_timeout=1',
+                         conn_instance=None,
+                         terminator_instance=None,
+                         termination_interval=None,
+                         schema='public')
 
 
 def get_config(base_dir, args=None):
@@ -770,7 +769,7 @@ def get_config(base_dir, args=None):
     path = os.path.join(base_dir, 'migrations.yml')
     try:
         with codecs.open(path, encoding='utf-8') as i:
-            base = yaml.load(i.read())
+            base = yaml.safe_load(i)
     except IOError:
         LOG.info('Unable to load %s. Using defaults', path)
         base = {}
@@ -790,9 +789,8 @@ def get_config(base_dir, args=None):
             conf = conf._replace(target=int(conf.target))
 
     if conf.termination_interval and not conf.dryrun:
-        conf = conf._replace(
-            terminator_instance=ConflictTerminator(conf.conn,
-                                                   conf.termination_interval))
+        conf = conf._replace(terminator_instance=ConflictTerminator(
+            conf.conn, conf.termination_interval))
         conf.terminator_instance.start()
 
     conf = conf._replace(conn_instance=_create_connection(conf))
@@ -814,48 +812,55 @@ def _main():
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        'cmd', choices=COMMANDS.keys(), type=str, help='Operation')
+    parser.add_argument('cmd',
+                        choices=COMMANDS.keys(),
+                        type=str,
+                        help='Operation')
     parser.add_argument('-t', '--target', type=str, help='Target version')
-    parser.add_argument(
-        '-c', '--conn', type=str, help='Postgresql connection string')
-    parser.add_argument('-m', '--schema', type=str, help='Postgresql schema')
-    parser.add_argument(
-        '-d', '--base_dir', type=str, default='', help='Migrations base dir')
-    parser.add_argument(
-        '-u',
-        '--user',
-        type=str,
-        help='Override database user in migration info')
+    parser.add_argument('-c',
+                        '--conn',
+                        type=str,
+                        help='Postgresql connection string')
+    parser.add_argument('-m',
+                        '--schema',
+                        type=str,
+                        help='Postgresql schema')
+    parser.add_argument('-d',
+                        '--base_dir',
+                        type=str,
+                        default='',
+                        help='Migrations base dir')
+    parser.add_argument('-u',
+                        '--user',
+                        type=str,
+                        help='Override database user in migration info')
     parser.add_argument('-b', '--baseline', type=int, help='Baseline version')
-    parser.add_argument(
-        '-a',
-        '--callbacks',
-        type=str,
-        help='Comma-separated list of callbacks '
-        '(type:dir/file)')
-    parser.add_argument(
-        '-s',
-        '--session',
-        action='append',
-        help='Session setup (e.g. isolation level)')
-    parser.add_argument(
-        '-n',
-        '--dryrun',
-        action='store_true',
-        help='Say "rollback" in the end instead of "commit"')
-    parser.add_argument(
-        '-l',
-        '--termination_interval',
-        type=float,
-        help='Inverval for terminating blocking pids')
-    parser.add_argument(
-        '-v', '--verbose', default=0, action='count', help='Be verbose')
+    parser.add_argument('-a',
+                        '--callbacks',
+                        type=str,
+                        help='Comma-separated list of callbacks '
+                        '(type:dir/file)')
+    parser.add_argument('-s',
+                        '--session',
+                        action='append',
+                        help='Session setup (e.g. isolation level)')
+    parser.add_argument('-n',
+                        '--dryrun',
+                        action='store_true',
+                        help='Say "rollback" in the end instead of "commit"')
+    parser.add_argument('-l',
+                        '--termination_interval',
+                        type=float,
+                        help='Inverval for terminating blocking pids')
+    parser.add_argument('-v',
+                        '--verbose',
+                        default=0,
+                        action='count',
+                        help='Be verbose')
 
     args = parser.parse_args()
-    logging.basicConfig(
-        level=(logging.ERROR - 10 * (min(3, args.verbose))),
-        format='%(asctime)s %(levelname)-8s: %(message)s')
+    logging.basicConfig(level=(logging.ERROR - 10 * (min(3, args.verbose))),
+                        format='%(asctime)s %(levelname)-8s: %(message)s')
 
     config = get_config(args.base_dir, args)
 

@@ -9,12 +9,12 @@ from behave import given, then, when
 
 
 def run_pgmigrate(migr_dir, args):
-    cmd = ['coverage', 'run', '-p', '--include=pgmigrate.py',
-           './pgmigrate.py', '-vvv', '-d', migr_dir,
-           '-c', 'dbname=pgmigratetest'] + str(args).split(' ')
+    cmd = [
+        'coverage', 'run', '-p', '--include=pgmigrate.py', './pgmigrate.py',
+        '-vvv', '-d', migr_dir, '-c', 'dbname=pgmigratetest'
+    ] + str(args).split(' ')
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     try:
         stdout, stderr = func_timeout(5, p.communicate)
@@ -23,11 +23,16 @@ def run_pgmigrate(migr_dir, args):
         stdout, stderr = p.communicate()
     return p.returncode, str(stdout), str(stderr)
 
+
 @given('successful pgmigrate run with "{args}"')
 def step_impl(context, args):
     if context.migrate_config:
         with open(os.path.join(context.migr_dir, 'migrations.yml'), 'w') as f:
-            f.write(yaml.dump(context.migrate_config))
+            yaml.safe_dump(context.migrate_config,
+                           f,
+                           encoding=None,
+                           default_flow_style=False,
+                           allow_unicode=True)
     res = run_pgmigrate(context.migr_dir, args)
 
     if res[0] != 0:
@@ -40,7 +45,11 @@ def step_impl(context, args):
 def step_impl(context, args):
     if context.migrate_config:
         with open(os.path.join(context.migr_dir, 'migrations.yml'), 'w') as f:
-            f.write(yaml.dump(context.migrate_config))
+            yaml.safe_dump(context.migrate_config,
+                           f,
+                           encoding=None,
+                           default_flow_style=False,
+                           allow_unicode=True)
     res = run_pgmigrate(context.migr_dir, args)
 
     context.last_migrate_res = {'ret': res[0], 'out': res[1], 'err': res[2]}
