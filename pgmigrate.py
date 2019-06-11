@@ -374,8 +374,8 @@ def _init_schema(cursor, schema):
 
     LOG.info('creating type schema_version_type')
     cursor.execute(
-        sql.SQL('CREATE TYPE {schema}.schema_version_type AS ENUM (%s, %s)')
-        .format(schema=sql.Identifier(schema)), ('auto', 'manual'))
+        sql.SQL('CREATE TYPE {schema}.schema_version_type AS ENUM (%s, %s)').
+        format(schema=sql.Identifier(schema)), ('auto', 'manual'))
     LOG.info(cursor.statusmessage)
 
     LOG.info('creating table schema_version')
@@ -565,12 +565,11 @@ def info(config, stdout=True):
     """
     Info cmdline wrapper
     """
-    state = _get_state(
-        config.base_dir,
-        config.baseline,
-        config.target,
-        config.cursor,
-        schema=config.schema)
+    state = _get_state(config.base_dir,
+                       config.baseline,
+                       config.target,
+                       config.cursor,
+                       schema=config.schema)
     if stdout:
         out_state = OrderedDict()
         for version in sorted(state, key=int):
@@ -683,12 +682,11 @@ def migrate(config):
                   'use latest available version)')
         raise MigrateError('Unknown target')
 
-    state = _get_state(
-        config.base_dir,
-        config.baseline,
-        config.target,
-        config.cursor,
-        schema=config.schema)
+    state = _get_state(config.base_dir,
+                       config.baseline,
+                       config.target,
+                       config.cursor,
+                       schema=config.schema)
     not_applied = [x for x in state if state[x]['installed_on'] is None]
     non_trans = [x for x in not_applied if not state[x]['transactional']]
 
@@ -722,8 +720,10 @@ def migrate(config):
             with closing(_create_connection(config)) as nt_conn:
                 nt_conn.autocommit = True
 
-                _execute_mixed_steps(
-                    config, steps, nt_conn, schema=config.schema)
+                _execute_mixed_steps(config,
+                                     steps,
+                                     nt_conn,
+                                     schema=config.schema)
 
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
@@ -821,10 +821,7 @@ def _main():
                         '--conn',
                         type=str,
                         help='Postgresql connection string')
-    parser.add_argument('-m',
-                        '--schema',
-                        type=str,
-                        help='Postgresql schema')
+    parser.add_argument('-m', '--schema', type=str, help='Postgresql schema')
     parser.add_argument('-d',
                         '--base_dir',
                         type=str,
