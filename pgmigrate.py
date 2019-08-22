@@ -87,6 +87,16 @@ class BaselineError(MigrateError):
     """
     pass
 
+def get_backend_pid(conn):
+    # Previosly we've used conn.get_backend_pid,
+    # but it returns a wrong pid when connecting
+    # to a PGBouncer:
+    # https://github.com/psycopg/psycopg2/issues/955
+    with closing(conn.cursor()) as cursor:
+        cursor.execute('SELECT pg_backend_pid()')
+        pid = cursor.fetchall()[0][0]
+        return pid
+
 
 class ConflictTerminator(threading.Thread):
     """
@@ -112,22 +122,23 @@ class ConflictTerminator(threading.Thread):
         """
         Add conn pid to pgmirate pids list
         """
-        self.pids.add(conn.get_backend_pid())
+        self.pids.add(get_backend_pid(conn))
 
     def remove_conn(self, conn):
         """
         Remove conn from pgmigrate pids list
         """
-        self.pids.remove(conn.get_backend_pid())
+        self.pids.remove(get_backend_pid(conn))
 
     def run(self):
         """
         Periodically terminate all backends blocking pgmigrate pids
         """
         self.conn = _create_raw_connection(self.conn_str, self.log)
-        self.conn.autocommit = True
+
         while self.should_run:
             with self.conn.cursor() as cursor:
+                print('Terminating conflicting pids:', self.pids)
                 for pid in self.pids:
                     cursor.execute(
                         'SELECT pid, pg_terminate_backend(pid) FROM '
@@ -146,6 +157,7 @@ REF_COLUMNS = ['version', 'description', 'type',
 def _create_raw_connection(conn_string, logger=LOG):
     conn = psycopg2.connect(conn_string, connection_factory=LoggingConnection)
     conn.initialize(logger)
+    conn.autocommit = True
 
     return conn
 
@@ -667,8 +679,8 @@ def migrate(config):
                                    'nontransactional migrations')
             config.cursor.execute('rollback')
             with closing(_create_connection(config)) as nt_conn:
-                nt_conn.autocommit = True
                 cursor = _init_cursor(nt_conn, config.session)
+
                 _migrate_step(state, _get_callbacks(''),
                               config.base_dir, config.user, cursor)
                 if config.terminator_instance:
@@ -677,8 +689,6 @@ def migrate(config):
             steps = _prepare_nontransactional_steps(state, config.callbacks)
 
             with closing(_create_connection(config)) as nt_conn:
-                nt_conn.autocommit = True
-
                 _execute_mixed_steps(config, steps, nt_conn)
 
                 if config.terminator_instance:
