@@ -4,8 +4,8 @@ PGmigrate - PostgreSQL migrations made easy
 """
 # -*- coding: utf-8 -*-
 #
-#    Copyright (c) 2016-2017 Yandex LLC <https://github.com/yandex>
-#    Copyright (c) 2016-2017 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2016-2019 Yandex LLC <https://github.com/yandex>
+#    Copyright (c) 2016-2019 Other contributors as noted in the AUTHORS file.
 #
 #    Permission to use, copy, modify, and distribute this software and its
 #    documentation for any purpose, without fee, and without a written
@@ -50,42 +50,36 @@ class MigrateError(RuntimeError):
     """
     Common migration error class
     """
-    pass
 
 
 class MalformedStatement(MigrateError):
     """
     Incorrect statement exception
     """
-    pass
 
 
 class MalformedMigration(MigrateError):
     """
     Incorrect migration exception
     """
-    pass
 
 
 class MalformedSchema(MigrateError):
     """
     Incorrect schema exception
     """
-    pass
 
 
 class ConfigurationError(MigrateError):
     """
     Incorrect config or cmd args exception
     """
-    pass
 
 
 class BaselineError(MigrateError):
     """
     Baseline error class
     """
-    pass
 
 def get_backend_pid(conn):
     # Previosly we've used conn.get_backend_pid,
@@ -102,6 +96,7 @@ class ConflictTerminator(threading.Thread):
     """
     Kills conflicting pids (only on postgresql > 9.6)
     """
+
     def __init__(self, conn_str, interval):
         threading.Thread.__init__(self, name='terminator')
         self.daemon = True
@@ -142,16 +137,20 @@ class ConflictTerminator(threading.Thread):
                 for pid in self.pids:
                     cursor.execute(
                         'SELECT pid, pg_terminate_backend(pid) FROM '
-                        'unnest(pg_blocking_pids(%s)) AS pid',
-                        (pid,))
+                        'unnest(pg_blocking_pids(%s)) AS pid', (pid, ))
                     terminated = [x[0] for x in cursor.fetchall()]
                     for i in terminated:
                         self.log.info('Terminated conflicting pid: %s', i)
             time.sleep(self.interval)
 
 
-REF_COLUMNS = ['version', 'description', 'type',
-               'installed_by', 'installed_on']
+REF_COLUMNS = [
+    'version',
+    'description',
+    'type',
+    'installed_by',
+    'installed_on',
+]
 
 
 def _create_raw_connection(conn_string, logger=LOG):
@@ -186,11 +185,11 @@ def _is_initialized(cursor):
     """
     Check that database is initialized
     """
-    cursor.execute('SELECT EXISTS(SELECT 1 FROM '
-                   'information_schema.tables '
-                   'WHERE table_schema = %s '
-                   'AND table_name = %s)',
-                   ('public', 'schema_version'))
+    cursor.execute(
+        'SELECT EXISTS(SELECT 1 FROM '
+        'information_schema.tables '
+        'WHERE table_schema = %s '
+        'AND table_name = %s)', ('public', 'schema_version'))
     table_exists = cursor.fetchone()[0]
 
     if not table_exists:
@@ -208,22 +207,28 @@ def _is_initialized(cursor):
     return True
 
 
-MIGRATION_FILE_RE = re.compile(
-    r'V(?P<version>\d+)__(?P<description>.+)\.sql$',
-)
-
+MIGRATION_FILE_RE = re.compile(r'V(?P<version>\d+)__(?P<description>.+)\.sql$')
 
 MigrationInfo = namedtuple('MigrationInfo', ('meta', 'file_path'))
 
-Callbacks = namedtuple('Callbacks', ('beforeAll', 'beforeEach',
-                                     'afterEach', 'afterAll'))
+Callbacks = namedtuple('Callbacks',
+                       ('beforeAll', 'beforeEach', 'afterEach', 'afterAll'))
 
-Config = namedtuple('Config', ('target', 'baseline', 'cursor', 'dryrun',
-                               'callbacks', 'user', 'base_dir', 'conn',
-                               'session', 'conn_instance',
-                               'terminator_instance', 'termination_interval'))
+Config = namedtuple('Config',
+                    ('target', 'baseline', 'cursor', 'dryrun', 'callbacks',
+                     'user', 'base_dir', 'conn', 'session', 'conn_instance',
+                     'terminator_instance', 'termination_interval'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
+
+
+def _get_files_from_dir(path):
+    """
+    Get all files in all subdirs in path
+    """
+    for root, _, files in os.walk(path):
+        for fname in files:
+            yield os.path.basename(fname), os.path.join(root, fname)
 
 
 def _get_migrations_info_from_dir(base_dir):
@@ -236,15 +241,11 @@ def _get_migrations_info_from_dir(base_dir):
         raise ConfigurationError(
             'Migrations dir not found (expected to be {path})'.format(
                 path=path))
-    for fname in os.listdir(path):
-        file_path = os.path.join(path, fname)
-        if not os.path.isfile(file_path):
-            continue
+    for fname, file_path in _get_files_from_dir(path):
         match = MIGRATION_FILE_RE.match(fname)
         if match is None:
-            LOG.warning(
-                'File %s does not match by pattern %s. Skipping it.',
-                file_path, MIGRATION_FILE_RE.pattern)
+            LOG.warning('File %s does not match by pattern %s. Skipping it.',
+                        file_path, MIGRATION_FILE_RE.pattern)
             continue
         version = int(match.group('version'))
         ret = dict(
@@ -260,13 +261,13 @@ def _get_migrations_info_from_dir(base_dir):
             file_path,
         )
         if version in migrations:
-            raise MalformedMigration((
-                'Found migrations with same version: {version} '
-                '\nfirst : {first_path}'
-                '\nsecond: {second_path}').format(
-                    version=version,
-                    first_path=migration.file_path,
-                    second_path=migrations[version].file_path))
+            raise MalformedMigration(
+                ('Found migrations with same version: {version} '
+                 '\nfirst : {first_path}'
+                 '\nsecond: {second_path}').format(
+                     version=version,
+                     first_path=migration.file_path,
+                     second_path=migrations[version].file_path))
         migrations[version] = migration
 
     return migrations
@@ -280,12 +281,14 @@ def _get_migrations_info(base_dir, baseline_v, target_v):
     target = target_v if target_v is not None else float('inf')
 
     for version, ret in _get_migrations_info_from_dir(base_dir).items():
-        if version > baseline_v and version <= target:
+        if baseline_v < version <= target:
             migrations[version] = ret.meta
         else:
             LOG.info(
                 'Ignore migration %r cause baseline: %r or target: %r',
-                ret, baseline_v, target,
+                ret,
+                baseline_v,
+                target,
             )
     return migrations
 
@@ -295,9 +298,8 @@ def _get_info(base_dir, baseline_v, target_v, cursor):
     Get migrations info from database and base dir
     """
     ret = {}
-    cursor.execute(
-        'SELECT {columns} FROM public.schema_version'.format(
-            columns=', '.join(REF_COLUMNS)))
+    cursor.execute('SELECT {columns} FROM public.schema_version'.format(
+        columns=', '.join(REF_COLUMNS)))
     for i in cursor.fetchall():
         version = {}
         for j in enumerate(REF_COLUMNS):
@@ -339,9 +341,9 @@ def _set_baseline(baseline_v, user, cursor):
     """
     Cleanup schema_version and set baseline
     """
-    cursor.execute('SELECT EXISTS(SELECT 1 FROM public'
-                   '.schema_version WHERE version >= %s::bigint)',
-                   (baseline_v,))
+    cursor.execute(
+        'SELECT EXISTS(SELECT 1 FROM public'
+        '.schema_version WHERE version >= %s::bigint)', (baseline_v, ))
     check_failed = cursor.fetchone()[0]
 
     if check_failed:
@@ -354,11 +356,11 @@ def _set_baseline(baseline_v, user, cursor):
     LOG.info(cursor.statusmessage)
 
     LOG.info('setting baseline')
-    cursor.execute('INSERT INTO public.schema_version '
-                   '(version, type, description, installed_by) '
-                   'VALUES (%s::bigint, %s, %s, %s)',
-                   (text(baseline_v), 'manual',
-                    'Forced baseline', user))
+    cursor.execute(
+        'INSERT INTO public.schema_version '
+        '(version, type, description, installed_by) '
+        'VALUES (%s::bigint, %s, %s, %s)',
+        (text(baseline_v), 'manual', 'Forced baseline', user))
     LOG.info(cursor.statusmessage)
 
 
@@ -367,18 +369,20 @@ def _init_schema(cursor):
     Create schema_version table
     """
     LOG.info('creating type schema_version_type')
-    cursor.execute('CREATE TYPE public.schema_version_type '
-                   'AS ENUM (%s, %s)', ('auto', 'manual'))
+    cursor.execute(
+        'CREATE TYPE public.schema_version_type '
+        'AS ENUM (%s, %s)', ('auto', 'manual'))
     LOG.info(cursor.statusmessage)
     LOG.info('creating table schema_version')
-    cursor.execute('CREATE TABLE public.schema_version ('
-                   'version BIGINT NOT NULL PRIMARY KEY, '
-                   'description TEXT NOT NULL, '
-                   'type public.schema_version_type NOT NULL '
-                   'DEFAULT %s, '
-                   'installed_by TEXT NOT NULL, '
-                   'installed_on TIMESTAMP WITHOUT time ZONE '
-                   'DEFAULT now() NOT NULL)', ('auto',))
+    cursor.execute(
+        'CREATE TABLE public.schema_version ('
+        'version BIGINT NOT NULL PRIMARY KEY, '
+        'description TEXT NOT NULL, '
+        'type public.schema_version_type NOT NULL '
+        'DEFAULT %s, '
+        'installed_by TEXT NOT NULL, '
+        'installed_on TIMESTAMP WITHOUT time ZONE '
+        'DEFAULT now() NOT NULL)', ('auto', ))
     LOG.info(cursor.statusmessage)
 
 
@@ -393,8 +397,7 @@ def _get_statements(path):
             data.encode('ascii')
         except UnicodeError as exc:
             raise MalformedStatement(
-                'Non ascii symbols in file: {0}, {1}'.format(
-                    path, text(exc)))
+                'Non ascii symbols in file: {0}, {1}'.format(path, text(exc)))
     data = sqlparse.format(data, strip_comments=True)
     for statement in sqlparse.parsestream(data, encoding='utf-8'):
         st_str = text(statement).strip().encode('utf-8')
@@ -437,12 +440,11 @@ def _apply_version(version, base_dir, user, cursor):
     LOG.info('Try apply version %r', version_info)
 
     _apply_file(version_info.file_path, cursor)
-    cursor.execute('INSERT INTO public.schema_version '
-                   '(version, description, installed_by) '
-                   'VALUES (%s::bigint, %s, %s)',
-                   (text(version),
-                    version_info.meta['description'],
-                    user))
+    cursor.execute(
+        'INSERT INTO public.schema_version '
+        '(version, description, installed_by) '
+        'VALUES (%s::bigint, %s, %s)',
+        (text(version), version_info.meta['description'], user))
 
 
 def _parse_str_callbacks(callbacks, ret, base_dir):
@@ -492,10 +494,7 @@ def _get_callbacks(callbacks, base_dir=''):
     """
     Parse cmdline/config callbacks
     """
-    ret = Callbacks(beforeAll=[],
-                    beforeEach=[],
-                    afterEach=[],
-                    afterAll=[])
+    ret = Callbacks(beforeAll=[], beforeEach=[], afterEach=[], afterAll=[])
     if isinstance(callbacks, dict):
         return _parse_dict_callbacks(callbacks, ret, base_dir)
     return _parse_str_callbacks(callbacks, ret, base_dir)
@@ -557,8 +556,8 @@ def info(config, stdout=True):
     """
     Info cmdline wrapper
     """
-    state = _get_state(config.base_dir, config.baseline,
-                       config.target, config.cursor)
+    state = _get_state(config.base_dir, config.baseline, config.target,
+                       config.cursor)
     if stdout:
         out_state = OrderedDict()
         for version in sorted(state, key=int):
@@ -598,20 +597,22 @@ def baseline(config):
 
 def _prepare_nontransactional_steps(state, callbacks):
     steps = []
-    i = {'state': {},
-         'cbs': _get_callbacks('')}
+    i = {'state': {}, 'cbs': _get_callbacks('')}
     for version in sorted(state):
         if not state[version]['transactional']:
             if i['state']:
                 steps.append(i)
-                i = {'state': {},
-                     'cbs': _get_callbacks('')}
+                i = {'state': {}, 'cbs': _get_callbacks('')}
             elif not steps:
                 LOG.error('First migration MUST be transactional')
                 raise MalformedMigration('First migration MUST '
                                          'be transactional')
-            steps.append({'state': {version: state[version]},
-                          'cbs': _get_callbacks('')})
+            steps.append({
+                'state': {
+                    version: state[version],
+                },
+                'cbs': _get_callbacks(''),
+            })
         else:
             i['state'][version] = state[version]
             i['cbs'] = callbacks
@@ -647,8 +648,8 @@ def _execute_mixed_steps(config, steps, nt_conn):
         else:
             cur = config.cursor
             commit_req = True
-        _migrate_step(step['state'], step['cbs'],
-                      config.base_dir, config.user, cur)
+        _migrate_step(step['state'], step['cbs'], config.base_dir, config.user,
+                      cur)
 
 
 def migrate(config):
@@ -660,15 +661,14 @@ def migrate(config):
                   'use latest available version)')
         raise MigrateError('Unknown target')
 
-    state = _get_state(config.base_dir, config.baseline,
-                       config.target, config.cursor)
+    state = _get_state(config.base_dir, config.baseline, config.target,
+                       config.cursor)
     not_applied = [x for x in state if state[x]['installed_on'] is None]
     non_trans = [x for x in not_applied if not state[x]['transactional']]
 
     if non_trans:
         if config.dryrun:
-            LOG.error('Dry run for nontransactional migrations '
-                      'is nonsence')
+            LOG.error('Dry run for nontransactional migrations ' 'is nonsence')
             raise MigrateError('Dry run for nontransactional migrations '
                                'is nonsence')
         if len(state) != len(not_applied):
@@ -680,9 +680,8 @@ def migrate(config):
             config.cursor.execute('rollback')
             with closing(_create_connection(config)) as nt_conn:
                 cursor = _init_cursor(nt_conn, config.session)
-
-                _migrate_step(state, _get_callbacks(''),
-                              config.base_dir, config.user, cursor)
+                _migrate_step(state, _get_callbacks(''), config.base_dir,
+                              config.user, cursor)
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
         else:
@@ -694,8 +693,8 @@ def migrate(config):
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
     else:
-        _migrate_step(state, config.callbacks, config.base_dir,
-                      config.user, config.cursor)
+        _migrate_step(state, config.callbacks, config.base_dir, config.user,
+                      config.cursor)
 
     _finish(config)
 
@@ -707,11 +706,16 @@ COMMANDS = {
     'migrate': migrate,
 }
 
-CONFIG_DEFAULTS = Config(target=None, baseline=0, cursor=None, dryrun=False,
-                         callbacks='', base_dir='', user=None,
+CONFIG_DEFAULTS = Config(target=None,
+                         baseline=0,
+                         cursor=None,
+                         dryrun=False,
+                         callbacks='',
+                         base_dir='',
+                         user=None,
                          session=['SET lock_timeout = 0'],
                          conn='dbname=postgres user=postgres '
-                              'connect_timeout=1',
+                         'connect_timeout=1',
                          conn_instance=None,
                          terminator_instance=None,
                          termination_interval=None)
@@ -724,7 +728,7 @@ def get_config(base_dir, args=None):
     path = os.path.join(base_dir, 'migrations.yml')
     try:
         with codecs.open(path, encoding='utf-8') as i:
-            base = yaml.load(i.read())
+            base = yaml.safe_load(i)
     except IOError:
         LOG.info('Unable to load %s. Using defaults', path)
         base = {}
@@ -744,15 +748,14 @@ def get_config(base_dir, args=None):
             conf = conf._replace(target=int(conf.target))
 
     if conf.termination_interval and not conf.dryrun:
-        conf = conf._replace(
-            terminator_instance=ConflictTerminator(
-                conf.conn, conf.termination_interval))
+        conf = conf._replace(terminator_instance=ConflictTerminator(
+            conf.conn, conf.termination_interval))
         conf.terminator_instance.start()
 
     conf = conf._replace(conn_instance=_create_connection(conf))
     conf = conf._replace(cursor=_init_cursor(conf.conn_instance, conf.session))
-    conf = conf._replace(callbacks=_get_callbacks(conf.callbacks,
-                                                  conf.base_dir))
+    conf = conf._replace(
+        callbacks=_get_callbacks(conf.callbacks, conf.base_dir))
 
     if conf.user is None:
         conf = conf._replace(user=_get_database_user(conf.cursor))
@@ -772,44 +775,47 @@ def _main():
                         choices=COMMANDS.keys(),
                         type=str,
                         help='Operation')
-    parser.add_argument('-t', '--target',
-                        type=str,
-                        help='Target version')
-    parser.add_argument('-c', '--conn',
+    parser.add_argument('-t', '--target', type=str, help='Target version')
+    parser.add_argument('-c',
+                        '--conn',
                         type=str,
                         help='Postgresql connection string')
-    parser.add_argument('-d', '--base_dir',
+    parser.add_argument('-d',
+                        '--base_dir',
                         type=str,
                         default='',
                         help='Migrations base dir')
-    parser.add_argument('-u', '--user',
+    parser.add_argument('-u',
+                        '--user',
                         type=str,
                         help='Override database user in migration info')
-    parser.add_argument('-b', '--baseline',
-                        type=int,
-                        help='Baseline version')
-    parser.add_argument('-a', '--callbacks',
+    parser.add_argument('-b', '--baseline', type=int, help='Baseline version')
+    parser.add_argument('-a',
+                        '--callbacks',
                         type=str,
                         help='Comma-separated list of callbacks '
-                             '(type:dir/file)')
-    parser.add_argument('-s', '--session',
+                        '(type:dir/file)')
+    parser.add_argument('-s',
+                        '--session',
                         action='append',
                         help='Session setup (e.g. isolation level)')
-    parser.add_argument('-n', '--dryrun',
+    parser.add_argument('-n',
+                        '--dryrun',
                         action='store_true',
                         help='Say "rollback" in the end instead of "commit"')
-    parser.add_argument('-l', '--termination_interval',
+    parser.add_argument('-l',
+                        '--termination_interval',
                         type=float,
                         help='Inverval for terminating blocking pids')
-    parser.add_argument('-v', '--verbose',
+    parser.add_argument('-v',
+                        '--verbose',
                         default=0,
                         action='count',
                         help='Be verbose')
 
     args = parser.parse_args()
-    logging.basicConfig(
-        level=(logging.ERROR - 10*(min(3, args.verbose))),
-        format='%(asctime)s %(levelname)-8s: %(message)s')
+    logging.basicConfig(level=(logging.ERROR - 10 * (min(3, args.verbose))),
+                        format='%(asctime)s %(levelname)-8s: %(message)s')
 
     config = get_config(args.base_dir, args)
 

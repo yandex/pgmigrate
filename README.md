@@ -45,6 +45,10 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.3 (2017-12-28)
+    * Fix migration error with comment at the end of file
+    * Add blocking pids termination
+    * Some minor fixes and improvements
 * 1.0.2 (2017-04-05)
     * Speed up get_info function a bit
     * Fix callbacks in transactional/nontransactional migrations mix on db init
