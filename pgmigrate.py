@@ -34,6 +34,7 @@ import re
 import sys
 import threading
 import time
+import uuid
 from builtins import str as text
 from collections import OrderedDict, namedtuple
 from contextlib import closing
@@ -41,6 +42,7 @@ from contextlib import closing
 import psycopg2
 import sqlparse
 import yaml
+from psycopg2.extensions import parse_dsn
 from psycopg2.extras import LoggingConnection
 
 LOG = logging.getLogger(__name__)
@@ -82,6 +84,14 @@ class BaselineError(MigrateError):
     """
 
 
+def get_conn_id(conn):
+    """
+    Extract application_name from dsn
+    """
+    parsed = parse_dsn(conn.dsn)
+    return parsed['application_name']
+
+
 class ConflictTerminator(threading.Thread):
     """
     Kills conflicting pids (only on postgresql > 9.6)
@@ -91,7 +101,7 @@ class ConflictTerminator(threading.Thread):
         self.daemon = True
         self.log = logging.getLogger('terminator')
         self.conn_str = conn_str
-        self.pids = set()
+        self.conns = set()
         self.interval = interval
         self.should_run = True
         self.conn = None
@@ -106,13 +116,13 @@ class ConflictTerminator(threading.Thread):
         """
         Add conn pid to pgmirate pids list
         """
-        self.pids.add(conn.get_backend_pid())
+        self.conns.add(get_conn_id(conn))
 
     def remove_conn(self, conn):
         """
         Remove conn from pgmigrate pids list
         """
-        self.pids.remove(conn.get_backend_pid())
+        self.conns.remove(get_conn_id(conn))
 
     def run(self):
         """
@@ -122,10 +132,17 @@ class ConflictTerminator(threading.Thread):
         self.conn.autocommit = True
         while self.should_run:
             with self.conn.cursor() as cursor:
-                for pid in self.pids:
+                for conn_id in self.conns:
                     cursor.execute(
-                        'SELECT pid, pg_terminate_backend(pid) FROM '
-                        'unnest(pg_blocking_pids(%s)) AS pid', (pid, ))
+                        """
+                        SELECT b.blocking_pid,
+                               pg_terminate_backend(b.blocking_pid)
+                        FROM (SELECT unnest(pg_blocking_pids(pid))
+                              AS blocking_pid
+                              FROM pg_stat_activity
+                              WHERE application_name
+                                  LIKE '%%' || %s || '%%') as b
+                        """, (conn_id, ))
                     terminated = [x[0] for x in cursor.fetchall()]
                     for i in terminated:
                         self.log.info('Terminated conflicting pid: %s', i)
@@ -149,7 +166,9 @@ def _create_raw_connection(conn_string, logger=LOG):
 
 
 def _create_connection(config):
-    conn = _create_raw_connection(config.conn)
+    conn_id = 'pgmigrate-{id}'.format(id=str(uuid.uuid4()))
+    conn = _create_raw_connection('{dsn} application_name={conn_id}'.format(
+        dsn=config.conn, conn_id=conn_id))
     if config.terminator_instance:
         config.terminator_instance.add_conn(conn)
 

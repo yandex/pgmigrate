@@ -370,6 +370,8 @@ lock timeout to 30 seconds one could do something like this:
 pgmigrate -s "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE" \
     -s "SET lock_timeout = '30s'" ...
 ```
+This feature will not work with connection pooler (such as `odyssey` or `pgbouncer`)
+in non-session mode.
 
 ## Terminating blocking pids
 
@@ -390,6 +392,9 @@ each pid blocking any of pgmigrate conn pids every `interval` seconds.
 Of course pgmigrate should be able to terminate other pids so migration user
 should be the app user or have `pg_signal_backend` grant. To terminate
 superuser (e.g. `postgres`) pids one could run pgmigrate with superuser.
+Session setup should not manipulate `application_name` setting because
+conflict terminations expects application names in pg_stat_activity to
+match internal dsn values.
 
 Note: this feature relays on `pg_blocking_pids()` function available since
 PostgreSQL 9.6.
