@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y software-properties-common locales && \
 ENV LANG en_US.utf8
 ENV DEBIAN_FRONTEND noninteractive
 
-ENV PG_MAJOR 11
+ENV PG_MAJOR 12
 
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 

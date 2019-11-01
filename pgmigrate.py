@@ -86,7 +86,6 @@ class ConflictTerminator(threading.Thread):
     """
     Kills conflicting pids (only on postgresql > 9.6)
     """
-
     def __init__(self, conn_str, interval):
         threading.Thread.__init__(self, name='terminator')
         self.daemon = True
