@@ -33,7 +33,7 @@ except ImportError:
 REQUIREMENTS = [
     'sqlparse >= 0.3.0',
     'psycopg2 >= 2.8.2',
-    'PyYAML >= 5.1',
+    'PyYAML >= 5.2',
 ]
 
 if sys.version_info < (3, 0):
