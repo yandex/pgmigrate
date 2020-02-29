@@ -45,6 +45,10 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.5 (2020-02-29)
+    * Use application_name instead of backend pid for conflict termination
+* 1.0.4 (2019-04-14)
+    * Allow using subdirs in migrations folder
 * 1.0.3 (2017-12-28)
     * Fix migration error with comment at the end of file
     * Add blocking pids termination
