@@ -398,3 +398,14 @@ match internal dsn values.
 
 Note: this feature relays on `pg_blocking_pids()` function available since
 PostgreSQL 9.6.
+
+## Session restriction
+
+In some cases you need to use several independent schemas in one database.
+For example large SaaS applications tend to use such setup for client separation.
+To use non-default schema for migrations one could pass `-m <schema>` option.
+By default schema restriction is enabled (it prevents access and modification
+of relations not in system schemas and selected schema).
+Some restrictions are hard to implement with current approach:
+relation drop and nontransactional migrations support.
+Schema restriction could be disabled with `--disable_schema_check` option.
