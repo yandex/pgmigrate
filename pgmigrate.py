@@ -42,7 +42,7 @@ from contextlib import closing
 import psycopg2
 import sqlparse
 import yaml
-from psycopg2.extensions import parse_dsn
+from psycopg2.extensions import make_dsn, parse_dsn
 from psycopg2.extras import LoggingConnection
 from psycopg2.sql import SQL, Identifier
 
@@ -168,8 +168,8 @@ def _create_raw_connection(conn_string, logger=LOG):
 
 def _create_connection(config):
     conn_id = 'pgmigrate-{id}'.format(id=str(uuid.uuid4()))
-    conn = _create_raw_connection('{dsn} application_name={conn_id}'.format(
-        dsn=config.conn, conn_id=conn_id))
+    conn = _create_raw_connection(
+        make_dsn(config.conn, application_name=conn_id))
     if config.terminator_instance:
         config.terminator_instance.add_conn(conn)
 
