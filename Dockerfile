@@ -1,5 +1,5 @@
 # vim:set ft=dockerfile:
-FROM ubuntu:bionic
+FROM ubuntu:focal
 
 # explicitly set user/group IDs
 RUN groupadd -r postgres --gid=999 && useradd -r -d /var/lib/postgresql -g postgres --uid=999 postgres
@@ -11,9 +11,9 @@ RUN apt-get update && apt-get install -y software-properties-common locales && \
 ENV LANG en_US.utf8
 ENV DEBIAN_FRONTEND noninteractive
 
-ENV PG_MAJOR 12
+ENV PG_MAJOR 13
 
-RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
+RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 
 RUN apt-get -o Acquire::AllowInsecureRepositories=true \
         -o Acquire::AllowDowngradeToInsecureRepositories=true update \
@@ -26,7 +26,7 @@ RUN apt-get -o Acquire::AllowInsecureRepositories=true \
         libpq-dev \
         python3-pip \
         python2.7-dev \
-        python3.6-dev \
+        python3.8-dev \
         postgresql-$PG_MAJOR \
         postgresql-contrib-$PG_MAJOR \
     && pip3 install tox
