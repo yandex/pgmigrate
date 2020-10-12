@@ -38,6 +38,46 @@ postgres=# CREATE DATABASE foodb;
 CREATE DATABASE
 ```
 
+## Connection configuration
+
+For example, you can use 3 ways to specify the configuration of the connection to the database:
+
+> **WARNING!**
+> Remember that storing passwords in clear text is extremely insecure! If you decide to use the first method, use encryption (like [Ansible Vault](https://docs.ansible.com/ansible/latest/user_guide/vault.html)), or CI tools for the rest of the methods.
+>
+> **NEVER STORE PASSWORDS OPEN *(... IN THE  REPOSITORY)* !**
+
+
+- Using `conn` settings in `migrations.yml` configuration:
+
+    ```yaml
+    callbacks:
+        beforeAll:
+            - callbacks/beforeAll
+        beforeEach:
+            - callbacks/beforeEach
+        afterEach:
+            - callbacks/afterEach
+        afterAll:
+            - callbacks/afterAll
+            - grants
+    conn: postgresql://postgres:postgres@localhost:5432/dbname
+    ```
+
+- Using `libpq` environment variables (simple example):
+
+    ```bash
+    PGUSER=postgres PGPASSWORD=postgres PGHOST=postgres PGPORT=5432 pgmigrate -t 1 info
+    ```
+
+- Using `-c/--conn` parameter:
+    
+    ```bash
+    pgmigrate -c postgresql://postgres:postgres@localhost:5432/dbname -t 1 info
+    ```
+
+You can find other connection methods in the Postgresql documentation (Why? See [this issue](https://github.com/yandex/pgmigrate/issues/12)).
+
 ## Getting migrations info before first migration
 
 ```
