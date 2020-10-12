@@ -19,6 +19,46 @@ foodb
 Every sql file has special operation on table `ops`.
 This will help in understanding what is going on in each pgmigrate run.
 
+## Configuration
+
+Let's start with [Example configuration](foodb/migrations.yml).
+
+### Callbacks
+Callbacks could be configured via command-line arguments like this:
+```
+admin@localhost foodb $ pgmigrate -a beforeAll:callbacks/beforeAll,afterAll:callbacks/afterAll ...
+```
+But if we have a lot of callbacks we could use configuration file for them:
+```
+callbacks:
+    beforeAll:
+        - callbacks/beforeAll
+    beforeEach:
+        - callbacks/beforeEach
+    afterEach:
+        - callbacks/afterEach
+    afterAll:
+        - callbacks/afterAll
+        - grants
+```
+
+### Connection
+We could use command-line arguments for connection configuration:
+```
+admin@localhost foodb $ pgmigrate -c 'dbname=foodb' ...
+```
+Or configuration file:
+```
+conn: dbname=foodb
+```
+Third option for setting connection params is using [environment variables](https://www.postgresql.org/docs/current/libpq-envars.html):
+```
+admin@localhost foodb $ PGDATABASE=foodb pgmigrate -c '' ...
+```
+Note: we need to explicitly set connstring to empty value via command-line
+argument or configuration file to force psycopg2 to pick fields from
+environment.
+
 ## Migration file name pattern
 
 All migration files should have versions and
