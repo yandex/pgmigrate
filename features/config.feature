@@ -1,5 +1,22 @@
 Feature: Getting info from config
 
+    Scenario: Empty callbacks in config
+        Given migration dir
+        And migrations
+           | file                     | code      |
+           | V1__Single_migration.sql | SELECT 1; |
+        And config
+        """
+        callbacks:
+            beforeAll:
+            beforeEach:
+            afterEach:
+            afterAll:
+        """
+        And database and connection
+        When we run pgmigrate with "-t 1 migrate"
+        Then pgmigrate command "succeeded"
+
     Scenario: Callbacks from config are executed in correct order
         Given migration dir
         And migrations

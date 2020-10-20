@@ -496,7 +496,7 @@ def _parse_str_callbacks(callbacks, ret, base_dir):
 def _parse_dict_callbacks(callbacks, ret, base_dir):
     for i in callbacks:
         if i in ret._fields:
-            for j in callbacks[i]:
+            for j in callbacks[i] or []:
                 path = os.path.join(base_dir, j)
                 if not os.path.exists(path):
                     raise ConfigurationError(
