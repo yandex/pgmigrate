@@ -1,6 +1,29 @@
 Feature: Getting info from config
 
+    Scenario: Empty config
+        Given migration dir
+        And migrations
+           | file                     | code      |
+           | V1__Single_migration.sql | SELECT 1; |
+        And empty config
+        And database and connection
+        When we run pgmigrate with "-t 1 migrate"
+        Then pgmigrate command "succeeded"
+
     Scenario: Empty callbacks in config
+        Given migration dir
+        And migrations
+           | file                     | code      |
+           | V1__Single_migration.sql | SELECT 1; |
+        And config
+        """
+        callbacks:
+        """
+        And database and connection
+        When we run pgmigrate with "-t 1 migrate"
+        Then pgmigrate command "succeeded"
+
+    Scenario: Empty callbacks lists in config
         Given migration dir
         And migrations
            | file                     | code      |
@@ -15,6 +38,15 @@ Feature: Getting info from config
         """
         And database and connection
         When we run pgmigrate with "-t 1 migrate"
+        Then pgmigrate command "succeeded"
+
+    Scenario: Empty callbacks lists in args
+        Given migration dir
+        And migrations
+           | file                     | code      |
+           | V1__Single_migration.sql | SELECT 1; |
+        And database and connection
+        When we run pgmigrate with "-a ,,,, -t 1 migrate"
         Then pgmigrate command "succeeded"
 
     Scenario: Callbacks from config are executed in correct order
@@ -93,3 +125,4 @@ Feature: Getting info from config
            | version | installed_by |
            | 1       | postgres     |
            | 2       | test_user    |
+

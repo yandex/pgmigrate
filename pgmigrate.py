@@ -471,6 +471,8 @@ def _apply_version(version, base_dir, user, schema, cursor):
 
 
 def _parse_str_callbacks(callbacks, ret, base_dir):
+    if not callbacks:
+        return ret
     callbacks = callbacks.split(',')
     for callback in callbacks:
         if not callback:
@@ -787,7 +789,7 @@ def get_config(base_dir, args=None):
     path = os.path.join(base_dir, 'migrations.yml')
     try:
         with codecs.open(path, encoding='utf-8') as i:
-            base = yaml.safe_load(i)
+            base = yaml.safe_load(i) or {}
     except IOError:
         LOG.info('Unable to load %s. Using defaults', path)
         base = {}
