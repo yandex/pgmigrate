@@ -115,14 +115,11 @@ Feature: Getting info from config
         And migrations
            | file                      | code      |
            | V1__Single_migration.sql  | SELECT 1; |
-           | V2__Another_migration.sql | SELECT 1; |
         And database and connection
-        When we run pgmigrate with "-t 1 migrate"
-        And we run pgmigrate with "-u test_user -t 2 migrate"
+        When we run pgmigrate with "-u test_user -t 1 migrate"
         Then pgmigrate command "succeeded"
         And database contains schema_version
         And query "SELECT version, installed_by from schema_version;" equals
            | version | installed_by |
-           | 1       | postgres     |
-           | 2       | test_user    |
+           | 1       | test_user    |
 

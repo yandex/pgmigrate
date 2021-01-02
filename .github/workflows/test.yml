@@ -1,0 +1,36 @@
+name: Test
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    name: Run tests and linters
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 2.7
+        uses: actions/setup-python@v1
+        with:
+          python-version: 2.7
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install tox
+        run: |
+          python3.8 -m pip install --upgrade pip
+          python3.8 -m pip install tox
+      - name: Start PostgreSQL
+        run: sudo service postgresql start
+      - name: Create PostgreSQL test env
+        run: |
+          sudo -u postgres psql -c "CREATE USER ${USER} WITH SUPERUSER ENCRYPTED PASSWORD 'dummy'"
+          echo "*:*:*:${USER}:dummy" > ~/.pgpass
+          chmod 0600 ~/.pgpass
+      - name: Run tox
+        run: tox
