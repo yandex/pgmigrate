@@ -1,5 +1,5 @@
 [![PyPI version](https://badge.fury.io/py/yandex-pgmigrate.svg)](https://badge.fury.io/py/yandex-pgmigrate)
-[![Build Status](https://travis-ci.org/yandex/pgmigrate.svg?branch=master)](https://travis-ci.org/yandex/pgmigrate)
+![Build Status](https://github.com/yandex/pgmigrate/workflows/Test/badge.svg)
 
 # PGmigrate
 
