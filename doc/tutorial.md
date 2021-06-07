@@ -436,7 +436,7 @@ Session setup should not manipulate `application_name` setting because
 conflict terminations expects application names in pg_stat_activity to
 match internal dsn values.
 
-Note: this feature relays on `pg_blocking_pids()` function available since
+Note: this feature relies on `pg_blocking_pids()` function available since
 PostgreSQL 9.6.
 
 ## Session restriction
