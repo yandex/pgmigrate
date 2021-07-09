@@ -228,7 +228,8 @@ Config = namedtuple(
     'Config',
     ('target', 'baseline', 'cursor', 'dryrun', 'callbacks', 'user', 'base_dir',
      'conn', 'session', 'conn_instance', 'terminator_instance',
-     'termination_interval', 'schema', 'disable_schema_check'))
+     'termination_interval', 'schema', 'disable_schema_check',
+     'disable_schema_create'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
 
@@ -381,14 +382,15 @@ def _set_baseline(baseline_v, user, schema, cursor):
     LOG.info(cursor.statusmessage)
 
 
-def _init_schema(schema, cursor):
+def _init_schema(schema, cursor, disable_schema_create):
     """
     Create schema_version table
     """
-    LOG.info('creating schema')
-    cursor.execute(
-        SQL('CREATE SCHEMA IF NOT EXISTS {schema}').format(
-            schema=Identifier(schema)))
+    if not disable_schema_create:
+        LOG.info('creating schema')
+        cursor.execute(
+            SQL('CREATE SCHEMA IF NOT EXISTS {schema}').format(
+                schema=Identifier(schema)))
     LOG.info('creating type schema_version_type')
     cursor.execute(
         SQL('CREATE TYPE {schema}.schema_version_type '
@@ -525,7 +527,9 @@ def _get_callbacks(callbacks, base_dir=''):
     return _parse_str_callbacks(callbacks, ret, base_dir)
 
 
-def _migrate_step(state, callbacks, base_dir, user, schema, cursor):
+def _migrate_step(
+    state, callbacks, base_dir, user, schema, cursor, disable_schema_create
+):
     """
     Apply one version with callbacks
     """
@@ -533,7 +537,7 @@ def _migrate_step(state, callbacks, base_dir, user, schema, cursor):
     should_migrate = False
     if not _is_initialized(schema, cursor):
         LOG.info('schema not initialized')
-        _init_schema(schema, cursor)
+        _init_schema(schema, cursor, disable_schema_create)
     for version in sorted(state.keys()):
         LOG.debug('has version %r', version)
         if state[version]['installed_on'] is None:
@@ -618,7 +622,7 @@ def baseline(config):
     Set baseline cmdline wrapper
     """
     if not _is_initialized(config.schema, config.cursor):
-        _init_schema(config.schema, config.cursor)
+        _init_schema(config.schema, config.cursor, config.disable_schema_create)
     _set_baseline(config.baseline, config.user, config.schema, config.cursor)
 
     _finish(config)
@@ -678,7 +682,7 @@ def _execute_mixed_steps(config, steps, nt_conn):
             cur = config.cursor
             commit_req = True
         _migrate_step(step['state'], step['cbs'], config.base_dir, config.user,
-                      config.schema, cur)
+                      config.schema, cur, config.disable_schema_create)
 
 
 def _schema_check(schema, cursor):
@@ -736,7 +740,8 @@ def migrate(config):
                 nt_conn.autocommit = True
                 cursor = _init_cursor(nt_conn, config.session)
                 _migrate_step(state, _get_callbacks(''), config.base_dir,
-                              config.user, config.schema, cursor)
+                              config.user, config.schema, cursor,
+                              config.disable_schema_create)
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
         else:
@@ -751,7 +756,8 @@ def migrate(config):
                     config.terminator_instance.remove_conn(nt_conn)
     else:
         _migrate_step(state, config.callbacks, config.base_dir, config.user,
-                      config.schema, config.cursor)
+                      config.schema, config.cursor,
+                      config.disable_schema_create)
         if not config.disable_schema_check:
             _schema_check(config.schema, config.cursor)
 
@@ -779,7 +785,8 @@ CONFIG_DEFAULTS = Config(target=None,
                          terminator_instance=None,
                          termination_interval=None,
                          schema=None,
-                         disable_schema_check=False)
+                         disable_schema_check=False,
+                         disable_schema_create=False)
 
 
 def get_config(base_dir, args=None):
@@ -872,6 +879,9 @@ def _main():
                         type=float,
                         help='Inverval for terminating blocking pids')
     parser.add_argument('-m', '--schema', type=str, help='Operate on schema')
+    parser.add_argument('--disable_schema_create',
+                        action='store_true',
+                        help='Do not create schema, when it initialize')
     parser.add_argument('--disable_schema_check',
                         action='store_true',
                         help='Do not check that all changes '
