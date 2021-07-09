@@ -385,10 +385,16 @@ def _init_schema(schema, cursor):
     """
     Create schema_version table
     """
-    LOG.info('creating schema')
     cursor.execute(
-        SQL('CREATE SCHEMA IF NOT EXISTS {schema}').format(
-            schema=Identifier(schema)))
+        'SELECT EXISTS(SELECT 1 FROM '
+        'information_schema.schemata '
+        'WHERE schema_name = %s)', (schema, ))
+    schema_exists = cursor.fetchone()[0]
+    if not schema_exists:
+        LOG.info('creating schema')
+        cursor.execute(
+            SQL('CREATE SCHEMA IF NOT EXISTS {schema}').format(
+                schema=Identifier(schema)))
     LOG.info('creating type schema_version_type')
     cursor.execute(
         SQL('CREATE TYPE {schema}.schema_version_type '
