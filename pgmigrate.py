@@ -881,6 +881,7 @@ def _main():
     parser.add_argument('-m', '--schema', type=str, help='Operate on schema')
     parser.add_argument('--disable_schema_create',
                         action='store_true',
+                        default=None,
                         help='Do not create schema, when it initialize')
     parser.add_argument('--disable_schema_check',
                         action='store_true',
