@@ -434,14 +434,14 @@ def _get_statements(path):
             yield st_str
 
 
-def _apply_statement(statement, cursor):
+def _apply_statement(statement, file_path, cursor):
     """
     Execute statement using cursor
     """
     try:
         cursor.execute(statement)
     except psycopg2.Error as exc:
-        LOG.error('Error executing statement:')
+        LOG.error('Error executing statement from %s:', file_path)
         for line in statement.splitlines():
             LOG.error(line)
         LOG.error(exc)
@@ -454,7 +454,7 @@ def _apply_file(file_path, cursor):
     """
     try:
         for statement in _get_statements(file_path):
-            _apply_statement(statement, cursor)
+            _apply_statement(statement, file_path, cursor)
     except MalformedStatement as exc:
         LOG.error(exc)
         raise exc
