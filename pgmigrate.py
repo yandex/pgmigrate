@@ -469,12 +469,7 @@ def _apply_version(version, base_dir, user, schema, cursor):
     LOG.info('Try apply version %r', version_info)
 
     _apply_file(version_info.file_path, cursor)
-    cursor.execute(
-        SQL('INSERT INTO {schema}.schema_version '
-            '(version, description, installed_by) '
-            'VALUES (%s::bigint, %s, %s)').format(schema=Identifier(schema)),
-        (text(version), version_info.meta['description'], user))
-
+    return version_info
 
 def _parse_str_callbacks(callbacks, ret, base_dir):
     if not callbacks:
@@ -558,13 +553,19 @@ def _migrate_step(state, callbacks, base_dir, user, schema, cursor):
                     LOG.info(callback)
                     _apply_file(callback, cursor)
 
-            _apply_version(version, base_dir, user, schema, cursor)
+            version_info = _apply_version(version, base_dir, user, schema, cursor)
 
             if callbacks.afterEach:
                 LOG.info('Executing afterEach callbacks:')
                 for callback in callbacks.afterEach:
                     LOG.info(callback)
                     _apply_file(callback, cursor)
+            # Put it afterEach callback to be able to reset roles
+            cursor.execute(
+                SQL('INSERT INTO {schema}.schema_version '
+                    '(version, description, installed_by) '
+                    'VALUES (%s::bigint, %s, %s)').format(schema=Identifier(schema)),
+                (text(version), version_info.meta['description'], user))
 
     if should_migrate and callbacks.afterAll:
         LOG.info('Executing afterAll callbacks:')
@@ -889,7 +890,7 @@ def _main():
                         help='Be verbose')
 
     args = parser.parse_args()
-    logging.basicConfig(level=(logging.ERROR - 10 * (min(3, args.verbose))),
+    logging.basicConfig(level=(logging.ERROR - (30 if args.verbose else 10)),
                         format='%(asctime)s %(levelname)-8s: %(message)s')
 
     config = get_config(args.base_dir, args)
