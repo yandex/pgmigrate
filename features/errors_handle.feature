@@ -150,3 +150,27 @@ Feature: Handling migration errors
         Then pgmigrate command "failed"
         And migrate command failed with First migration MUST be transactional
         And database has no schema_version table
+
+    Scenario: Version gaps
+        Given migration dir
+        And migrations
+           | file               | code      |
+           | V2__migration1.sql | SELECT 1; |
+           | V5__migration2.sql | SELECT 1; |
+        And database and connection
+        When we run pgmigrate with "--check_serial_versions -t 5 migrate"
+        Then pgmigrate command "failed"
+        And migrate command failed with missing versions 3, 4
+        And database has no schema_version table
+
+    Scenario: Version gaps with applied migration
+        Given migration dir
+        And migrations
+           | file               | code      |
+           | V2__migration1.sql | SELECT 1; |
+           | V5__migration2.sql | SELECT 1; |
+        And database and connection
+        And successful pgmigrate run with "--check_serial_versions -t 2 migrate"
+        When we run pgmigrate with "--check_serial_versions -t 5 migrate"
+        Then pgmigrate command "failed"
+        And migrate command failed with missing versions 3, 4
