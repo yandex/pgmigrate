@@ -449,3 +449,14 @@ of relations not in system schemas and selected schema).
 Some restrictions are hard to implement with current approach:
 relation drop and nontransactional migrations support.
 Schema restriction could be disabled with `--disable_schema_check` option.
+
+## Avoiding gaps in versions
+
+Sometimes development process leads to adding a gaps in migration versions.
+E.g. current version is `N`. Alice worked on branch `a` and expects branch `b`
+(Bob is working on it) to be merged first. So she decides to select version
+`N+2` instead of `N+1` (Bob selects this version). But for some reason branch `a`
+was merged before `b`. If we run migrations on database without branch `b` merge
+we'll need to change version in `b` to `N+3` or it will be skipped.
+One could run migrate with `--check_serial_versions` option to avoid applying
+migrations with gaps in versions.

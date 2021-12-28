@@ -224,11 +224,11 @@ MigrationInfo = namedtuple('MigrationInfo', ('meta', 'file_path'))
 Callbacks = namedtuple('Callbacks',
                        ('beforeAll', 'beforeEach', 'afterEach', 'afterAll'))
 
-Config = namedtuple(
-    'Config',
-    ('target', 'baseline', 'cursor', 'dryrun', 'callbacks', 'user', 'base_dir',
-     'conn', 'session', 'conn_instance', 'terminator_instance',
-     'termination_interval', 'schema', 'disable_schema_check'))
+Config = namedtuple('Config',
+                    ('target', 'baseline', 'cursor', 'dryrun', 'callbacks',
+                     'user', 'base_dir', 'conn', 'session', 'conn_instance',
+                     'terminator_instance', 'termination_interval', 'schema',
+                     'disable_schema_check', 'check_serial_versions'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
 
@@ -708,6 +708,24 @@ def _schema_check(schema, cursor):
                 used=(', '.join(sorted(unexpected)))))
 
 
+def _check_serial_versions(state, not_applied):
+    """
+    Check that there are no gaps in migration versions
+    """
+    applied = [x for x in state if state[x]['installed_on'] is not None]
+    sorted_versions = sorted(not_applied)
+    if applied:
+        sorted_versions.insert(0, max(applied))
+    first = sorted_versions[0]
+    last = sorted_versions[-1]
+    if last - first + 1 != len(sorted_versions):
+        versions = set(sorted_versions)
+        missing = [str(x) for x in range(first, last) if x not in versions]
+        raise MigrateError(
+            'Migration versions have gaps: missing versions {versions}'.format(
+                versions=(', '.join(missing))))
+
+
 def migrate(config):
     """
     Migrate cmdline wrapper
@@ -721,6 +739,9 @@ def migrate(config):
                        config.schema, config.cursor)
     not_applied = [x for x in state if state[x]['installed_on'] is None]
     non_trans = [x for x in not_applied if not state[x]['transactional']]
+
+    if not_applied and config.check_serial_versions:
+        _check_serial_versions(state, not_applied)
 
     if non_trans:
         if not config.disable_schema_check:
@@ -785,7 +806,8 @@ CONFIG_DEFAULTS = Config(target=None,
                          terminator_instance=None,
                          termination_interval=None,
                          schema=None,
-                         disable_schema_check=False)
+                         disable_schema_check=False,
+                         check_serial_versions=False)
 
 
 def get_config(base_dir, args=None):
@@ -882,6 +904,10 @@ def _main():
                         action='store_true',
                         help='Do not check that all changes '
                         'are in selected schema')
+    parser.add_argument('--check_serial_versions',
+                        action='store_true',
+                        help='Check that there are no gaps '
+                        'in migration versions')
     parser.add_argument('-v',
                         '--verbose',
                         default=0,
