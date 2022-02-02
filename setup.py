@@ -4,8 +4,8 @@ setup.py for pgmigrate
 """
 # encoding: utf-8
 #
-#    Copyright (c) 2016-2021 Yandex LLC <https://github.com/yandex>
-#    Copyright (c) 2016-2021 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2016-2022 Yandex LLC <https://github.com/yandex>
+#    Copyright (c) 2016-2022 Other contributors as noted in the AUTHORS file.
 #
 #    Permission to use, copy, modify, and distribute this software and its
 #    documentation for any purpose, without fee, and without a written
