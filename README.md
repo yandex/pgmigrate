@@ -45,6 +45,10 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.7 (2022-02-02)
+    * Skip unnecessary schema creation on init
+    * Add file path to statement apply error log
+    * Add version gaps check
 * 1.0.6 (2020-10-29)
     * Make dsn manipulations more robust
     * Fix empty values-related bugs in config and args parsing
