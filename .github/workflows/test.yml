@@ -12,19 +12,19 @@ jobs:
     name: Run tests and linters
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python 2.7
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: 2.7
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.11
       - name: Install tox
         run: |
-          python3.8 -m pip install --upgrade pip
-          python3.8 -m pip install tox
+          python3.11 -m pip install --upgrade pip
+          python3.11 -m pip install tox
       - name: Start PostgreSQL
         run: sudo service postgresql start
       - name: Create PostgreSQL test env
