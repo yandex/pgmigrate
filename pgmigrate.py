@@ -260,13 +260,13 @@ def _get_migrations_info_from_dir(base_dir):
                         file_path, MIGRATION_FILE_RE.pattern)
             continue
         version = int(match.group('version'))
-        ret = dict(
-            version=version,
-            type='auto',
-            installed_by=None,
-            installed_on=None,
-            description=match.group('description').replace('_', ' '),
-        )
+        ret = {
+            'version': version,
+            'type': 'auto',
+            'installed_by': None,
+            'installed_on': None,
+            'description': match.group('description').replace('_', ' '),
+        }
         ret['transactional'] = 'NONTRANSACTIONAL' not in ret['description']
         migration = MigrationInfo(
             ret,
@@ -724,7 +724,7 @@ def _check_serial_versions(state, not_applied):
         missing = [str(x) for x in range(first, last) if x not in versions]
         raise MigrateError(
             'Migration versions have gaps: missing versions {versions}'.format(
-                versions=(', '.join(missing))))
+                versions=', '.join(missing)))
 
 
 def migrate(config):
