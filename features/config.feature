@@ -75,6 +75,29 @@ Feature: Getting info from config
             | 6   | After each  |
             | 7   | After all   |
 
+    Scenario: Reordering setting schema version and afterEach callback works
+        Given migration dir
+        And migrations
+           | file                      | code      |
+           | V1__Single_migration.sql  | SELECT 1; |
+           | V2__Another_migration.sql | SELECT 1; |
+        And config
+        """
+        set_version_info_after_callbacks: true
+        """
+        And config callbacks
+           | type       | file            | code                                                                 |
+           | beforeAll  | before_all.sql  | CREATE TABLE mycooltable (seq SERIAL PRIMARY KEY, count int);        |
+           | afterEach  | after_each.sql  | INSERT INTO mycooltable (count) SELECT count(*) FROM schema_version; |
+        And database and connection
+        When we run pgmigrate with "-t 2 migrate"
+        Then pgmigrate command "succeeded"
+        And database contains schema_version
+        And query "SELECT * from mycooltable order by seq;" equals
+            | seq | count |
+            | 1   | 0     |
+            | 2   | 1     |
+
     Scenario: Callbacks from config are executed from dir
         Given migration dir
         And migrations
