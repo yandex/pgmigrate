@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y ca-certificates locales && \
 ENV LANG en_US.utf8
 ENV DEBIAN_FRONTEND noninteractive
 
-ENV PG_MAJOR 15
+ENV PG_MAJOR 16
 
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 RUN echo 'deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu/ jammy main' > /etc/apt/sources.list.d/deadsnakes-ubuntu-ppa.list
