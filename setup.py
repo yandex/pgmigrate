@@ -41,7 +41,7 @@ if sys.version_info < (3, 0):
 
 setup(
     name='yandex-pgmigrate',
-    version='1.0.7',
+    version='1.0.8',
     description='PostgreSQL migrations made easy',
     license='PostgreSQL License',
     url='https://github.com/yandex/pgmigrate/',

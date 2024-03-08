@@ -45,6 +45,8 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.8 (2024-03-08)
+    * Allow reordering setting schema version and afterEach callback
 * 1.0.7 (2022-02-02)
     * Skip unnecessary schema creation on init
     * Add file path to statement apply error log
