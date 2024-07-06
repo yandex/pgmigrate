@@ -21,7 +21,11 @@ def run_pgmigrate(migr_dir, args):
     except FunctionTimedOut:
         p.terminate()
         stdout, stderr = p.communicate()
-    return p.returncode, str(stdout), str(stderr)
+    if not isinstance(stdout, str):
+        stdout = stdout.decode('utf-8')
+    if not isinstance(stderr, str):
+        stderr = stderr.decode('utf-8')
+    return p.returncode, stdout, stderr
 
 
 @given('successful pgmigrate run with "{args}"')

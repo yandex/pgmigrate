@@ -226,11 +226,11 @@ Callbacks = namedtuple('Callbacks',
                        ('beforeAll', 'beforeEach', 'afterEach', 'afterAll'))
 
 Config = namedtuple(
-    'Config',
-    ('target', 'baseline', 'cursor', 'dryrun', 'callbacks', 'user', 'base_dir',
-     'conn', 'session', 'conn_instance', 'terminator_instance',
-     'termination_interval', 'schema', 'disable_schema_check',
-     'check_serial_versions', 'set_version_info_after_callbacks'))
+    'Config', ('target', 'baseline', 'cursor', 'dryrun', 'callbacks', 'user',
+               'base_dir', 'conn', 'session', 'conn_instance',
+               'terminator_instance', 'termination_interval', 'schema',
+               'disable_schema_check', 'check_serial_versions',
+               'set_version_info_after_callbacks', 'show_only_unapplied'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
 
@@ -604,6 +604,9 @@ def info(config, stdout=True):
     if stdout:
         out_state = OrderedDict()
         for version in sorted(state, key=int):
+            if config.show_only_unapplied and state[version].meta[
+                    'installed_on'] is not None:
+                continue
             out_state[version] = state[version].meta
         sys.stdout.write(
             json.dumps(out_state, indent=4, separators=(',', ': ')) + '\n')
@@ -821,7 +824,8 @@ CONFIG_DEFAULTS = Config(target=None,
                          schema=None,
                          disable_schema_check=False,
                          check_serial_versions=False,
-                         set_version_info_after_callbacks=False)
+                         set_version_info_after_callbacks=False,
+                         show_only_unapplied=False)
 
 
 def get_config(base_dir, args=None):
@@ -922,6 +926,10 @@ def _main():
                         action='store_true',
                         help='Check that there are no gaps '
                         'in migration versions')
+    parser.add_argument('-o',
+                        '--show_only_unapplied',
+                        action='store_true',
+                        help='Show only not applied migrations in info')
     parser.add_argument('-v',
                         '--verbose',
                         default=0,
