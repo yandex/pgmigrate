@@ -39,10 +39,15 @@ REQUIREMENTS = [
 if sys.version_info < (3, 0):
     REQUIREMENTS.append('future >= 0.17.1')
 
+with open('README.md', encoding='utf-8') as readme:
+    long_description = readme.read()
+
 setup(
     name='yandex-pgmigrate',
-    version='1.0.8',
+    version='1.0.9',
     description='PostgreSQL migrations made easy',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     license='PostgreSQL License',
     url='https://github.com/yandex/pgmigrate/',
     author='Yandex LLC',

@@ -45,6 +45,8 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.9 (2024-07-06)
+    * Add an option to show only unapplied migrations in info
 * 1.0.8 (2024-03-08)
     * Allow reordering setting schema version and afterEach callback
 * 1.0.7 (2022-02-02)
