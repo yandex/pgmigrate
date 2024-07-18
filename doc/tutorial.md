@@ -45,7 +45,7 @@ callbacks:
 ### Connection
 We could use command-line arguments for connection configuration:
 ```
-admin@localhost foodb $ pgmigrate -c 'dbname=foodb' ...
+admin@localhost foodb $ pgmigrate -c 'dbname=foodb user=foo ...' ...
 ```
 Or configuration file:
 ```
