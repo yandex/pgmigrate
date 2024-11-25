@@ -9,7 +9,7 @@ Feature: Conflicting pids termination
            | V3__Alter_test_table.sql  | ALTER TABLE test ADD COLUMN test text; |
         And database and connection
         And successful pgmigrate run with "-t 2 migrate"
-        And not commited query "UPDATE test SET id = 2 WHERE id = 1"
+        And not committed query "UPDATE test SET id = 2 WHERE id = 1"
         When we run pgmigrate with "-l 0.1 -t 3 migrate"
         Then pgmigrate command "succeeded"
 
@@ -22,7 +22,7 @@ Feature: Conflicting pids termination
            | V3__NONTRANSACTIONAL_migration.sql  | ALTER TABLE test ADD COLUMN test text; |
         And database and connection
         And successful pgmigrate run with "-t 2 migrate"
-        And not commited query "UPDATE test SET id = 2 WHERE id = 1"
+        And not committed query "UPDATE test SET id = 2 WHERE id = 1"
         When we run pgmigrate with "-l 0.1 -t 3 migrate"
         Then pgmigrate command "succeeded"
 
@@ -35,6 +35,6 @@ Feature: Conflicting pids termination
         And database and connection
         And query "CREATE TABLE test (id bigint)"
         And query "INSERT INTO test (id) VALUES (1)"
-        And not commited query "UPDATE test SET id = 2 WHERE id = 1"
+        And not committed query "UPDATE test SET id = 2 WHERE id = 1"
         When we run pgmigrate with "-l 0.1 -t 2 migrate"
         Then pgmigrate command "succeeded"

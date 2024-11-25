@@ -138,7 +138,7 @@ Feature: Handling migration errors
         When we run pgmigrate with "-n -t 2 migrate"
         Then pgmigrate command "failed"
         And database contains schema_version
-        And migrate command failed with is nonsence
+        And migrate command failed with is nonsense
 
     Scenario: Nontransactional migration on empty database
         Given migration dir
