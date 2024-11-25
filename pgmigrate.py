@@ -764,9 +764,9 @@ def migrate(config):
                 'Schema check is not available for nontransactional '
                 'migrations')
         if config.dryrun:
-            LOG.error('Dry run for nontransactional migrations is nonsence')
+            LOG.error('Dry run for nontransactional migrations is nonsense')
             raise MigrateError('Dry run for nontransactional migrations '
-                               'is nonsence')
+                               'is nonsense')
         if len(state) != len(not_applied):
             if len(not_applied) != len(non_trans):
                 LOG.error('Unable to mix transactional and '
@@ -916,7 +916,7 @@ def _main():
     parser.add_argument('-l',
                         '--termination_interval',
                         type=float,
-                        help='Inverval for terminating blocking pids')
+                        help='Interval for terminating blocking pids')
     parser.add_argument('-m', '--schema', type=str, help='Operate on schema')
     parser.add_argument('--disable_schema_check',
                         action='store_true',

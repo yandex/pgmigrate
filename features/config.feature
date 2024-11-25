@@ -114,7 +114,7 @@ Feature: Getting info from config
            | seq | op        |
            | 1   | After all |
 
-    Scenario: Callbacks from config are overrided by args
+    Scenario: Callbacks from config are overridden by args
         Given migration dir
         And migrations
            | file                     | code                                                        |
