@@ -13,7 +13,7 @@ Feature: Baseline
         And database contains schema_version
         And migration info contains forced baseline=3
 
-    Scenario: Setting baseline on noninitalized database
+    Scenario: Setting baseline on noninitialized database
         Given migration dir
         And database and connection
         When we run pgmigrate with "-b 1 baseline"

@@ -1,7 +1,7 @@
 from behave import given, then
 
 
-@given('not commited query "{query}"')  # noqa
+@given('not committed query "{query}"')  # noqa
 def step_impl(context, query):
     cur = context.conn.cursor()
     cur.execute(query)
