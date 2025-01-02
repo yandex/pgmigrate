@@ -4,8 +4,8 @@ PGmigrate - PostgreSQL migrations made easy
 """
 # -*- coding: utf-8 -*-
 #
-#    Copyright (c) 2016-2024 Yandex LLC <https://github.com/yandex>
-#    Copyright (c) 2016-2024 Other contributors as noted in the AUTHORS file.
+#    Copyright (c) 2016-2025 Yandex LLC <https://github.com/yandex>
+#    Copyright (c) 2016-2025 Other contributors as noted in the AUTHORS file.
 #
 #    Permission to use, copy, modify, and distribute this software and its
 #    documentation for any purpose, without fee, and without a written
