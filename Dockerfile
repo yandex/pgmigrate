@@ -8,10 +8,10 @@ RUN groupadd -r postgres --gid=999 && useradd -r -d /var/lib/postgresql -g postg
 RUN apt-get update && apt-get install -y ca-certificates locales && \
     rm -rf /var/lib/apt/lists/* && \
     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-ENV LANG en_US.utf8
-ENV DEBIAN_FRONTEND noninteractive
+ENV LANG=en_US.utf8
+ENV DEBIAN_FRONTEND=noninteractive
 
-ENV PG_MAJOR 17
+ENV PG_MAJOR=17
 
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 RUN echo 'deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu/ jammy main' > /etc/apt/sources.list.d/deadsnakes-ubuntu-ppa.list

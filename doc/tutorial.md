@@ -192,6 +192,7 @@ Your production databases are likely larger than test ones.
 And migration to version 3 could take a lot of time.
 You definitely should stop on version 2, check that everything is working fine,
 and then move to version 3.
+If you are absolutely sure that you want this mix you could use `--force_mixed` option.
 
 ## Migrating to second version
 Ok. Now let's try version 2.
