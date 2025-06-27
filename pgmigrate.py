@@ -226,11 +226,12 @@ Callbacks = namedtuple('Callbacks',
                        ('beforeAll', 'beforeEach', 'afterEach', 'afterAll'))
 
 Config = namedtuple(
-    'Config', ('target', 'baseline', 'cursor', 'dryrun', 'callbacks', 'user',
-               'base_dir', 'conn', 'session', 'conn_instance',
-               'terminator_instance', 'termination_interval', 'schema',
-               'disable_schema_check', 'check_serial_versions',
-               'set_version_info_after_callbacks', 'show_only_unapplied'))
+    'Config',
+    ('target', 'baseline', 'cursor', 'dryrun', 'callbacks', 'user', 'base_dir',
+     'conn', 'session', 'conn_instance', 'terminator_instance',
+     'termination_interval', 'schema', 'disable_schema_check',
+     'check_serial_versions', 'set_version_info_after_callbacks',
+     'show_only_unapplied', 'force_mixed'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
 
@@ -646,14 +647,18 @@ def baseline(config):
 
 
 def _prepare_nontransactional_steps(state, callbacks):
+    initialized = False
     steps = []
     i = {'state': {}, 'cbs': _get_callbacks('')}
     for version in sorted(state):
+        if state[version].meta['installed_on'] is not None:
+            initialized = True
+            continue
         if not state[version].meta['transactional']:
             if i['state']:
                 steps.append(i)
                 i = {'state': {}, 'cbs': _get_callbacks('')}
-            elif not steps:
+            elif not steps and not initialized:
                 LOG.error('First migration MUST be transactional')
                 raise MalformedMigration('First migration MUST '
                                          'be transactional')
@@ -767,7 +772,7 @@ def migrate(config):
             LOG.error('Dry run for nontransactional migrations is nonsense')
             raise MigrateError('Dry run for nontransactional migrations '
                                'is nonsense')
-        if len(state) != len(not_applied):
+        if len(state) != len(not_applied) and not config.force_mixed:
             if len(not_applied) != len(non_trans):
                 LOG.error('Unable to mix transactional and '
                           'nontransactional migrations')
@@ -822,6 +827,7 @@ CONFIG_DEFAULTS = Config(target=None,
                          terminator_instance=None,
                          termination_interval=None,
                          schema=None,
+                         force_mixed=False,
                          disable_schema_check=False,
                          check_serial_versions=False,
                          set_version_info_after_callbacks=False,
@@ -930,6 +936,10 @@ def _main():
                         '--show_only_unapplied',
                         action='store_true',
                         help='Show only not applied migrations in info')
+    parser.add_argument('--force_mixed',
+                        action='store_true',
+                        help='Force apply of transactional and '
+                        'nontransactional migrations on initialized database')
     parser.add_argument('-v',
                         '--verbose',
                         default=0,

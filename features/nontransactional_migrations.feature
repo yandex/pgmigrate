@@ -111,3 +111,49 @@ Feature: Nontransactional migrations support
            | 8   | After all   |
            | 9   | Migration 4 |
            | 10  | Migration 5 |
+
+    Scenario: Mix of transactional and nontransactional migrations with force
+        Given migration dir
+        And migrations
+           | file                               | code                                                 |
+           | V1__Transactional_migration.sql    | INSERT INTO mycooltable (op) values ('Migration 1'); |
+           | V2__NONTRANSACTIONAL_migration.sql | INSERT INTO mycooltable (op) values ('Migration 2'); |
+           | V3__Transactional_migration.sql    | INSERT INTO mycooltable (op) values ('Migration 3'); |
+           | V4__NONTRANSACTIONAL_migration.sql | INSERT INTO mycooltable (op) values ('Migration 4'); |
+           | V5__NONTRANSACTIONAL_migration.sql | INSERT INTO mycooltable (op) values ('Migration 5'); |
+        And callbacks
+           | type       | file            | code                                                                                                                          |
+           | beforeAll  | before_all.sql  | CREATE TABLE IF NOT EXISTS mycooltable (seq SERIAL PRIMARY KEY, op TEXT); INSERT INTO mycooltable (op) values ('Before all'); |
+           | beforeEach | before_each.sql | INSERT INTO mycooltable (op) values ('Before each');                                                                          |
+           | afterEach  | after_each.sql  | INSERT INTO mycooltable (op) values ('After each');                                                                           |
+           | afterAll   | after_all.sql   | INSERT INTO mycooltable (op) values ('After all');                                                                            |
+        And database and connection
+        When we run pgmigrate with our callbacks and "-t 1 migrate"
+        Then pgmigrate command "succeeded"
+        And migrate command passed with Migrating to version 1
+        And database contains schema_version
+        And query "SELECT * from mycooltable order by seq;" equals
+           | seq | op          |
+           | 1   | Before all  |
+           | 2   | Before each |
+           | 3   | Migration 1 |
+           | 4   | After each  |
+           | 5   | After all   |
+        When we run pgmigrate with our callbacks and "-t latest --force_mixed migrate"
+        Then pgmigrate command "succeeded"
+        And migrate command passed with Migrating to version 5
+        And query "SELECT * from mycooltable order by seq;" equals
+           | seq | op          |
+           | 1   | Before all  |
+           | 2   | Before each |
+           | 3   | Migration 1 |
+           | 4   | After each  |
+           | 5   | After all   |
+           | 6   | Migration 2 |
+           | 7   | Before all  |
+           | 8   | Before each |
+           | 9   | Migration 3 |
+           | 10  | After each  |
+           | 11  | After all   |
+           | 12  | Migration 4 |
+           | 13  | Migration 5 |
