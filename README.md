@@ -45,6 +45,8 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.10 (2025-06-30)
+    * Add option to allow mixing transactional and non-transactional migrations
 * 1.0.9 (2024-07-06)
     * Add an option to show only unapplied migrations in info
 * 1.0.8 (2024-03-08)
