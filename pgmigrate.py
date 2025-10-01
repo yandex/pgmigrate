@@ -424,7 +424,7 @@ def _get_statements(path):
     """
     with codecs.open(path, encoding='utf-8') as i:
         data = i.read()
-    if u'/* pgmigrate-encoding: utf-8 */' not in data:
+    if u'/* pgmigrate-encoding: ascii */' in data:
         try:
             data.encode('ascii')
         except UnicodeError as exc:
