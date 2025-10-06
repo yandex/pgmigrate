@@ -14,7 +14,7 @@ jobs:
     env:
       LANG: en_US.utf8
       DEBIAN_FRONTEND: noninteractive
-      PG_MAJOR: 17
+      PG_MAJOR: 18
     container:
       image: ubuntu:noble
     steps:
@@ -39,10 +39,10 @@ jobs:
           echo 'deb http://apt.postgresql.org/pub/repos/apt/ noble-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
           echo 'deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu/ noble main' > /etc/apt/sources.list.d/deadsnakes-ubuntu-ppa.list
           apt-get -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true update
-          apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o APT::Get::AllowUnauthenticated=true install -y postgresql-common sudo libpq-dev python3.11-dev python3.11-lib2to3 build-essential curl postgresql-$PG_MAJOR postgresql-contrib-$PG_MAJOR
+          apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o APT::Get::AllowUnauthenticated=true install -y postgresql-common sudo libpq-dev python3.13-dev build-essential curl postgresql-$PG_MAJOR postgresql-contrib-$PG_MAJOR
           curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-          python3.11 get-pip.py
-          pip3.11 install tox
+          python3.13 get-pip.py
+          pip3.13 install tox
       - name: Start PostgreSQL
         run: |
           chown -R postgres:postgres .
