@@ -588,9 +588,9 @@ def _migrate_step(state, callbacks, user, schema,
 
 def _finish(config):
     if config.dryrun:
-        config.cursor.execute('rollback')
+        config.conn_instance.rollback()
     else:
-        config.cursor.execute('commit')
+        config.conn_instance.commit()
     if config.terminator_instance:
         config.terminator_instance.stop()
     config.conn_instance.close()
@@ -696,7 +696,7 @@ def _execute_mixed_steps(config, steps, nt_conn):
     commit_req = False
     for step in steps:
         if commit_req:
-            config.cursor.execute('commit')
+            config.conn_instance.commit()
             commit_req = False
         if not list(step['state'].values())[0].meta['transactional']:
             cur = _init_cursor(nt_conn, config.session)
