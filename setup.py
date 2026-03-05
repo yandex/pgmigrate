@@ -31,9 +31,9 @@ except ImportError:
     from distutils import setup
 
 REQUIREMENTS = [
-    'sqlparse >= 0.3.0',
-    'psycopg2 >= 2.8.2',
-    'PyYAML >= 5.2',
+    'sqlparse >= 0.5.5',
+    'psycopg2 >= 2.9.11',
+    'PyYAML >= 6.0.3',
 ]
 
 if sys.version_info < (3, 0):

@@ -41,6 +41,7 @@ from contextlib import closing
 
 import psycopg2
 import sqlparse
+import sqlparse.engine.grouping
 import yaml
 from psycopg2.extensions import make_dsn, parse_dsn
 from psycopg2.extras import LoggingConnection
@@ -951,6 +952,9 @@ def _main():
                         format='%(asctime)s %(levelname)-8s: %(message)s')
 
     config = get_config(args.base_dir, args)
+
+    sqlparse.engine.grouping.MAX_GROUPING_DEPTH = None
+    sqlparse.engine.grouping.MAX_GROUPING_TOKENS = None
 
     COMMANDS[args.cmd](config)
 
