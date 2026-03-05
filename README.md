@@ -45,6 +45,8 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.12 (2026-03-05)
+    * Disable sqlparse grouping limits to allow large insert migration
 * 1.0.11 (2026-02-27)
     * Use psycopg2 commit/rollback to avoid messing up it's state
 * 1.0.10 (2025-06-30)
