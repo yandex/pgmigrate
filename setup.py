@@ -2,7 +2,6 @@
 """
 setup.py for pgmigrate
 """
-# encoding: utf-8
 #
 #    Copyright (c) 2016-2026 Yandex LLC <https://github.com/yandex>
 #    Copyright (c) 2016-2026 Other contributors as noted in the AUTHORS file.
@@ -23,21 +22,13 @@ setup.py for pgmigrate
 #    BASIS, AND YANDEX LLC HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE,
 #    SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
-import sys
-
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils import setup
+from setuptools import setup
 
 REQUIREMENTS = [
     'sqlparse >= 0.5.5',
     'psycopg2 >= 2.9.11',
     'PyYAML >= 6.0.3',
 ]
-
-if sys.version_info < (3, 0):
-    REQUIREMENTS.append('future >= 0.17.1')
 
 with open('README.md', encoding='utf-8') as readme:
     long_description = readme.read()
@@ -54,6 +45,7 @@ setup(
     author_email='opensource@yandex-team.ru',
     maintainer='Yandex LLC',
     maintainer_email='opensource@yandex-team.ru',
+    python_requires='>=3.10',
     zip_safe=False,
     platforms=['Linux', 'BSD', 'MacOS'],
     packages=['.'],

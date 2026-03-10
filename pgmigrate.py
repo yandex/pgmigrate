@@ -2,7 +2,6 @@
 """
 PGmigrate - PostgreSQL migrations made easy
 """
-# -*- coding: utf-8 -*-
 #
 #    Copyright (c) 2016-2026 Yandex LLC <https://github.com/yandex>
 #    Copyright (c) 2016-2026 Other contributors as noted in the AUTHORS file.
@@ -23,10 +22,7 @@ PGmigrate - PostgreSQL migrations made easy
 #    BASIS, AND YANDEX LLC HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE,
 #    SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import argparse
-import codecs
 import json
 import logging
 import os
@@ -35,7 +31,6 @@ import sys
 import threading
 import time
 import uuid
-from builtins import str as text
 from collections import OrderedDict, namedtuple
 from contextlib import closing
 
@@ -100,7 +95,7 @@ class ConflictTerminator(threading.Thread):
     """
 
     def __init__(self, conn_str, interval):
-        threading.Thread.__init__(self, name='terminator')
+        super().__init__(name='terminator')
         self.daemon = True
         self.log = logging.getLogger('terminator')
         self.conn_str = conn_str
@@ -367,7 +362,7 @@ def _set_baseline(baseline_v, user, schema, cursor):
     if check_failed:
         raise BaselineError(
             'Unable to baseline, version '
-            '{version} already applied'.format(version=text(baseline_v)))
+            '{version} already applied'.format(version=str(baseline_v)))
 
     LOG.info('cleaning up table schema_version')
     cursor.execute(
@@ -381,7 +376,7 @@ def _set_baseline(baseline_v, user, schema, cursor):
             '(version, type, description, installed_by) '
             'VALUES (%s::bigint, %s, %s, %s)').format(
                 schema=Identifier(schema)),
-        (text(baseline_v), 'manual', 'Forced baseline', user))
+        (str(baseline_v), 'manual', 'Forced baseline', user))
     LOG.info(cursor.statusmessage)
 
 
@@ -423,17 +418,17 @@ def _get_statements(path):
     """
     Get statements from file
     """
-    with codecs.open(path, encoding='utf-8') as i:
+    with open(path, encoding='utf-8') as i:
         data = i.read()
-    if u'/* pgmigrate-encoding: utf-8 */' not in data:
+    if '/* pgmigrate-encoding: utf-8 */' not in data:
         try:
             data.encode('ascii')
         except UnicodeError as exc:
             raise MalformedStatement(
-                'Non ascii symbols in file: {0}, {1}'.format(path, text(exc)))
+                'Non ascii symbols in file: {0}, {1}'.format(path, str(exc)))
     data = sqlparse.format(data, strip_comments=True)
     for statement in sqlparse.parsestream(data, encoding='utf-8'):
-        st_str = text(statement).strip().encode('utf-8')
+        st_str = str(statement).strip().encode('utf-8')
         if st_str:
             yield st_str
 
@@ -478,7 +473,7 @@ def _set_schema_version(version, version_info, user, schema, cursor):
         SQL('INSERT INTO {schema}.schema_version '
             '(version, description, installed_by) '
             'VALUES (%s::bigint, %s, %s)').format(schema=Identifier(schema)),
-        (text(version), version_info.meta['description'], user))
+        (str(version), version_info.meta['description'], user))
 
 
 def _parse_str_callbacks(callbacks, ret, base_dir):
@@ -492,11 +487,11 @@ def _parse_str_callbacks(callbacks, ret, base_dir):
         if tokens[0] not in ret._fields:
             raise ConfigurationError(
                 'Unexpected callback '
-                'type: {type}'.format(type=text(tokens[0])))
+                'type: {type}'.format(type=str(tokens[0])))
         path = os.path.join(base_dir, tokens[1])
         if not os.path.exists(path):
             raise ConfigurationError(
-                'Path unavailable: {path}'.format(path=text(path)))
+                'Path unavailable: {path}'.format(path=str(path)))
         if os.path.isdir(path):
             for fname in sorted(os.listdir(path)):
                 getattr(ret, tokens[0]).append(os.path.join(path, fname))
@@ -513,7 +508,7 @@ def _parse_dict_callbacks(callbacks, ret, base_dir):
                 path = os.path.join(base_dir, j)
                 if not os.path.exists(path):
                     raise ConfigurationError(
-                        'Path unavailable: {path}'.format(path=text(path)))
+                        'Path unavailable: {path}'.format(path=str(path)))
                 if os.path.isdir(path):
                     for fname in sorted(os.listdir(path)):
                         getattr(ret, i).append(os.path.join(path, fname))
@@ -521,7 +516,7 @@ def _parse_dict_callbacks(callbacks, ret, base_dir):
                     getattr(ret, i).append(path)
         else:
             raise ConfigurationError(
-                'Unexpected callback type: {type}'.format(type=text(i)))
+                'Unexpected callback type: {type}'.format(type=str(i)))
 
     return ret
 
@@ -678,7 +673,7 @@ def _prepare_nontransactional_steps(state, callbacks):
 
     transactional = []
     for (num, step) in enumerate(steps):
-        if list(step['state'].values())[0].meta['transactional']:
+        if next(iter(step['state'].values())).meta['transactional']:
             transactional.append(num)
 
     if len(transactional) > 1:
@@ -699,7 +694,7 @@ def _execute_mixed_steps(config, steps, nt_conn):
         if commit_req:
             config.conn_instance.commit()
             commit_req = False
-        if not list(step['state'].values())[0].meta['transactional']:
+        if not next(iter(step['state'].values())).meta['transactional']:
             cur = _init_cursor(nt_conn, config.session)
         else:
             cur = config.cursor
@@ -841,7 +836,7 @@ def get_config(base_dir, args=None):
     """
     path = os.path.join(base_dir, 'migrations.yml')
     try:
-        with codecs.open(path, encoding='utf-8') as i:
+        with open(path, encoding='utf-8') as i:
             base = yaml.safe_load(i) or {}
     except IOError:
         LOG.info('Unable to load %s. Using defaults', path)

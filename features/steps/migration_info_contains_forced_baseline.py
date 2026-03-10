@@ -9,5 +9,5 @@ from pgmigrate import _get_info
 def step_impl(context, baseline, schema='public'):
     cur = context.conn.cursor()
     info = _get_info(context.migr_dir, 0, 1, schema, cur)
-    assert list(info.values())[0].meta['version'] == int(baseline)
-    assert list(info.values())[0].meta['description'] == 'Forced baseline'
+    assert next(iter(info.values())).meta['version'] == int(baseline)
+    assert next(iter(info.values())).meta['description'] == 'Forced baseline'

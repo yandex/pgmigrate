@@ -1,4 +1,3 @@
-import io
 import os
 
 from behave import given
@@ -9,7 +8,7 @@ def step_impl(context):
     migrations_path = os.path.join(context.migr_dir, 'migrations')
     for row in context.table:
         path = os.path.join(migrations_path, row['file'])
-        with io.open(path, 'w', encoding='utf-8') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             f.write(row['code'].replace('\\n', '\n'))
 
 
