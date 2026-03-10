@@ -181,9 +181,9 @@ admin@localhost foodb $ pgmigrate -t 3 migrate
 Traceback (most recent call last):
   File "/usr/local/bin/pgmigrate", line 9, in <module>
     load_entry_point('yandex-pgmigrate==1.0.0', 'console_scripts', 'pgmigrate')()
-  File "/usr/local/lib/python2.7/dist-packages/pgmigrate.py", line 663, in _main
+  File "/usr/local/lib/python3/dist-packages/pgmigrate.py", in _main
     COMMANDS[args.cmd](config)
-  File "/usr/local/lib/python2.7/dist-packages/pgmigrate.py", line 549, in migrate
+  File "/usr/local/lib/python3/dist-packages/pgmigrate.py", in migrate
     raise MigrateError('Unable to mix transactional and '
 pgmigrate.MigrateError: Unable to mix transactional and nontransactional migrations
 ```
