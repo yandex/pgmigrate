@@ -194,6 +194,15 @@ You definitely should stop on version 2, check that everything is working fine,
 and then move to version 3.
 If you are absolutely sure that you want this mix you could use `--force_mixed` option.
 
+## Ungrouped transactions
+By default all consecutive transactional migrations are applied in one
+transaction. If you want each transactional migration to be committed
+separately (equivalent to running `pgmigrate -t 1 migrate && pgmigrate -t 2
+migrate` and so on), you could use `--ungroup` option. `beforeAll` and
+`afterAll` callbacks are still executed only once per run. With this option
+migrations applied before the failing one are kept in the database.
+Dry run is not available with `--ungroup`.
+
 ## Migrating to second version
 Ok. Now let's try version 2.
 ```
