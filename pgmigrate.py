@@ -227,7 +227,7 @@ Config = namedtuple(
      'conn', 'session', 'conn_instance', 'terminator_instance',
      'termination_interval', 'schema', 'disable_schema_check',
      'check_serial_versions', 'set_version_info_after_callbacks',
-     'show_only_unapplied', 'force_mixed'))
+     'show_only_unapplied', 'force_mixed', 'ungroup'))
 
 CONFIG_IGNORE = ['cursor', 'conn_instance', 'terminator_instance']
 
@@ -642,7 +642,7 @@ def baseline(config):
     _finish(config)
 
 
-def _prepare_nontransactional_steps(state, callbacks):
+def _prepare_nontransactional_steps(state, callbacks, group_transactions=True):
     initialized = False
     steps = []
     i = {'state': {}, 'cbs': _get_callbacks('')}
@@ -667,6 +667,9 @@ def _prepare_nontransactional_steps(state, callbacks):
         else:
             i['state'][version] = state[version]
             i['cbs'] = callbacks
+            if not group_transactions:
+                steps.append(i)
+                i = {'state': {}, 'cbs': _get_callbacks('')}
 
     if i['state']:
         steps.append(i)
@@ -701,6 +704,8 @@ def _execute_mixed_steps(config, steps, nt_conn):
             commit_req = True
         _migrate_step(step['state'], step['cbs'], config.user, config.schema,
                       config.set_version_info_after_callbacks, cur)
+        if commit_req and not config.disable_schema_check:
+            _schema_check(config.schema, config.cursor)
 
 
 def _schema_check(schema, cursor):
@@ -784,7 +789,8 @@ def migrate(config):
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
         else:
-            steps = _prepare_nontransactional_steps(state, config.callbacks)
+            steps = _prepare_nontransactional_steps(
+                state, config.callbacks, group_transactions=not config.ungroup)
 
             with closing(_create_connection(config)) as nt_conn:
                 nt_conn.autocommit = True
@@ -793,6 +799,22 @@ def migrate(config):
 
                 if config.terminator_instance:
                     config.terminator_instance.remove_conn(nt_conn)
+    elif config.ungroup:
+        if config.dryrun:
+            LOG.error('Dry run for ungrouped migrations is nonsense')
+            raise MigrateError('Dry run for ungrouped migrations '
+                               'is nonsense')
+        steps = _prepare_nontransactional_steps(state,
+                                                config.callbacks,
+                                                group_transactions=False)
+
+        with closing(_create_connection(config)) as nt_conn:
+            nt_conn.autocommit = True
+
+            _execute_mixed_steps(config, steps, nt_conn)
+
+            if config.terminator_instance:
+                config.terminator_instance.remove_conn(nt_conn)
     else:
         _migrate_step(state, config.callbacks, config.user, config.schema,
                       config.set_version_info_after_callbacks, config.cursor)
@@ -827,7 +849,8 @@ CONFIG_DEFAULTS = Config(target=None,
                          disable_schema_check=False,
                          check_serial_versions=False,
                          set_version_info_after_callbacks=False,
-                         show_only_unapplied=False)
+                         show_only_unapplied=False,
+                         ungroup=False)
 
 
 def get_config(base_dir, args=None):
@@ -936,6 +959,10 @@ def _main():
                         action='store_true',
                         help='Force apply of transactional and '
                         'nontransactional migrations on initialized database')
+    parser.add_argument('--ungroup',
+                        action='store_true',
+                        help='Apply each transactional migration '
+                        'in its own transaction')
     parser.add_argument('-v',
                         '--verbose',
                         default=0,
