@@ -164,7 +164,7 @@ def _create_raw_connection(conn_string, logger=LOG):
 
 
 def _create_connection(config):
-    conn_id = 'pgmigrate-{id}'.format(id=str(uuid.uuid4()))
+    conn_id = f'pgmigrate-{uuid.uuid4()!s}'
     conn = _create_raw_connection(
         make_dsn(config.conn, application_name=conn_id))
     if config.terminator_instance:
@@ -249,8 +249,7 @@ def _get_migrations_info_from_dir(base_dir):
     migrations = {}
     if not (os.path.exists(path) and os.path.isdir(path)):
         raise ConfigurationError(
-            'Migrations dir not found (expected to be {path})'.format(
-                path=path))
+            f'Migrations dir not found (expected to be {path})')
     for fname, file_path in _get_files_from_dir(path):
         match = MIGRATION_FILE_RE.match(fname)
         if match is None:
@@ -272,12 +271,9 @@ def _get_migrations_info_from_dir(base_dir):
         )
         if version in migrations:
             raise MalformedMigration(
-                ('Found migrations with same version: {version} '
-                 '\nfirst : {first_path}'
-                 '\nsecond: {second_path}').format(
-                     version=version,
-                     first_path=migration.file_path,
-                     second_path=migrations[version].file_path))
+                f'Found migrations with same version: {version} '
+                f'\nfirst : {migration.file_path}'
+                f'\nsecond: {migrations[version].file_path}')
         migrations[version] = migration
 
     return migrations
@@ -324,7 +320,7 @@ def _get_info(base_dir, baseline_v, target_v, schema, cursor):
         version['transactional'] = transactional
         ret[version['version']] = MigrationInfo(meta=version, file_path='')
 
-        baseline_v = max(baseline_v, sorted(ret.keys())[-1])
+        baseline_v = max(baseline_v, *ret.keys())
 
     migrations_info = _get_migrations_info(base_dir, baseline_v, target_v)
     for version in migrations_info:
@@ -360,9 +356,8 @@ def _set_baseline(baseline_v, user, schema, cursor):
     check_failed = cursor.fetchone()[0]
 
     if check_failed:
-        raise BaselineError(
-            'Unable to baseline, version '
-            '{version} already applied'.format(version=str(baseline_v)))
+        raise BaselineError('Unable to baseline, version '
+                            f'{baseline_v!s} already applied')
 
     LOG.info('cleaning up table schema_version')
     cursor.execute(
@@ -425,7 +420,7 @@ def _get_statements(path):
             data.encode('ascii')
         except UnicodeError as exc:
             raise MalformedStatement(
-                'Non ascii symbols in file: {0}, {1}'.format(path, str(exc)))
+                f'Non ascii symbols in file: {path}, {exc!s}')
     data = sqlparse.format(data, strip_comments=True)
     for statement in sqlparse.parsestream(data, encoding='utf-8'):
         st_str = str(statement).strip().encode('utf-8')
@@ -456,7 +451,7 @@ def _apply_file(file_path, cursor):
             _apply_statement(statement, file_path, cursor)
     except MalformedStatement as exc:
         LOG.error(exc)
-        raise exc
+        raise
 
 
 def _apply_version(version_info, cursor):
@@ -485,13 +480,11 @@ def _parse_str_callbacks(callbacks, ret, base_dir):
             continue
         tokens = callback.split(':')
         if tokens[0] not in ret._fields:
-            raise ConfigurationError(
-                'Unexpected callback '
-                'type: {type}'.format(type=str(tokens[0])))
+            raise ConfigurationError('Unexpected callback '
+                                     f'type: {tokens[0]!s}')
         path = os.path.join(base_dir, tokens[1])
         if not os.path.exists(path):
-            raise ConfigurationError(
-                'Path unavailable: {path}'.format(path=str(path)))
+            raise ConfigurationError(f'Path unavailable: {path!s}')
         if os.path.isdir(path):
             for fname in sorted(os.listdir(path)):
                 getattr(ret, tokens[0]).append(os.path.join(path, fname))
@@ -507,16 +500,14 @@ def _parse_dict_callbacks(callbacks, ret, base_dir):
             for j in callbacks[i] or []:
                 path = os.path.join(base_dir, j)
                 if not os.path.exists(path):
-                    raise ConfigurationError(
-                        'Path unavailable: {path}'.format(path=str(path)))
+                    raise ConfigurationError(f'Path unavailable: {path!s}')
                 if os.path.isdir(path):
                     for fname in sorted(os.listdir(path)):
                         getattr(ret, i).append(os.path.join(path, fname))
                 else:
                     getattr(ret, i).append(path)
         else:
-            raise ConfigurationError(
-                'Unexpected callback type: {type}'.format(type=str(i)))
+            raise ConfigurationError(f'Unexpected callback type: {i!s}')
 
     return ret
 
@@ -721,7 +712,7 @@ def _schema_check(schema, cursor):
     unexpected = set()
     for namespace, relation in cursor.fetchall():
         if namespace != schema:
-            unexpected.add('.'.join((namespace, relation)))
+            unexpected.add(f'{namespace}.{relation}')
 
     if unexpected:
         raise MigrateError(
@@ -861,7 +852,7 @@ def get_config(base_dir, args=None):
     try:
         with open(path, encoding='utf-8') as i:
             base = yaml.safe_load(i) or {}
-    except IOError:
+    except OSError:
         LOG.info('Unable to load %s. Using defaults', path)
         base = {}
 
@@ -869,9 +860,9 @@ def get_config(base_dir, args=None):
     for i in [j for j in CONFIG_DEFAULTS._fields if j not in CONFIG_IGNORE]:
         if i in base:
             conf = conf._replace(**{i: base[i]})
-        if args is not None:
-            if i in args.__dict__ and args.__dict__[i] is not None:
-                conf = conf._replace(**{i: args.__dict__[i]})
+        if args is not None and i in args.__dict__ and args.__dict__[
+                i] is not None:
+            conf = conf._replace(**{i: args.__dict__[i]})
 
     if conf.target is not None:
         if conf.target == 'latest':
