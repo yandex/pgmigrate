@@ -45,6 +45,8 @@ Complete manual is [here](doc/tutorial.md).
 
 ## Release history
 
+* 1.0.13 (2026-08-31)
+    * Allow applying each transactional migration in its own transaction
 * 1.0.12 (2026-03-05)
     * Disable sqlparse grouping limits to allow large insert migration
 * 1.0.11 (2026-02-27)

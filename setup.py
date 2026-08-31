@@ -35,7 +35,7 @@ with open('README.md', encoding='utf-8') as readme:
 
 setup(
     name='yandex-pgmigrate',
-    version='1.0.12',
+    version='1.0.13',
     description='PostgreSQL migrations made easy',
     long_description=long_description,
     long_description_content_type='text/markdown',
