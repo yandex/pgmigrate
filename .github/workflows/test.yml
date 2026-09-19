@@ -32,7 +32,7 @@ jobs:
         run: |
           apt-get install -y postgresql-common wget jq
       - name: Check for spelling typos
-        uses: crate-ci/typos@master
+        uses: crate-ci/typos@main
       - name: Install PostgreSQL ${PG_MAJOR} and Python
         run: |
           YES=yes /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
