@@ -12,7 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get install -y postgresql-common
 
-ENV PG_MAJOR=18
+ENV PG_MAJOR=19
 
 ENV YES=yes
 RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh

@@ -14,7 +14,7 @@ jobs:
     env:
       LANG: en_US.utf8
       DEBIAN_FRONTEND: noninteractive
-      PG_MAJOR: 18
+      PG_MAJOR: 19
     container:
       image: ubuntu:resolute
     steps:
